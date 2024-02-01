@@ -1,6 +1,6 @@
 # WooPy
 
-![woopy](https://raw.githubusercontent.com/atiilla/woopy/main/logo.png)
+![woopy](https://raw.githubusercontent.com/atiilla/woopy/main/logo.svg)
 
 ## What does this application do for your website?
 What will docker-compose contain?
