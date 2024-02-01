@@ -1,0 +1,9 @@
+docker
+flask
+flask_swagger_ui
+flask-restful
+typer
+kivy
+python-dotenv
+requests
+typing_extensions
