@@ -1,6 +1,23 @@
+# WooPy
+
+![woopy](https://raw.githubusercontent.com/atiilla/woopy/main/logo.png)
+
+## What does this application do for your website?
+What will docker-compose contain?
+- Database: `mysql/mariadb`
+- Website: `wordpress`
+- Admin: `phpmyadmin`
+- Proxy: `traefik`
+- Cache: `redis`
+- Monitoring: `cadvisor`
+- Management: `portainer`
+- Vault: `a tool for securely accessing secrets`
+- Code: `online vscode`
+
 # Setup
 
 ## Install Docker
+
 ```bash
 apt-get update
 apt-get install -y apt-transport-https ca-certificates curl gnupg2 software-properties-common
@@ -52,6 +69,7 @@ docker rm $(docker ps -a -q)
 ```
 
 ## Install Docker Compose
+
 ```bash
 sudo apt-get install -y python3-pip
 ```
@@ -72,8 +90,8 @@ docker-compose up -d
 docker-compose down
 ```
 
-
 ## Install Docker
+
 ```bash
 cd test
 ```
@@ -121,7 +139,6 @@ docker-compose exec wordpress wp plugin install stripe-for-woocommerce --activat
 docker-compose exec --user root wordpress wp plugin install woocommerce --activate
 docker-compose exec --user root wordpress wp plugin install stripe-for-woocommerce --activate
 ```
-
 
 # CLI
 
