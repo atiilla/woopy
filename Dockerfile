@@ -11,6 +11,8 @@ COPY shared /app/shared
 COPY native /app/native
 COPY web /app/web
 COPY cli /app/cli
+COPY client /app/client
+COPY bridge /app/bridge
 
 # Install the required dependencies
 RUN pip3 install -r /app/requirements.txt

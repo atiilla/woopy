@@ -4,6 +4,9 @@ flask_swagger_ui
 flask-restful
 typer
 kivy
+kivymd
 python-dotenv
 requests
 typing_extensions
+woocommerce
+opencv-python
