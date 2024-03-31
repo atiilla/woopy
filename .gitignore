@@ -51,7 +51,6 @@ wp-config.php
 
 terraform/variables.tf
 
-
 # VS Code 
 .history
 .vscode
@@ -70,38 +69,17 @@ gui.spec
 desco_products.json
 gui.specs
 
-/desktop/venv
-/desktop/dist
-/desktop/build
-/desktop/temp
-
-/mobile/venv
-/mobile/dist
-/mobile/build
-/mobile/temp
-
-/web/venv
-/web/dist
-/web/build
-/web/temp
-
-
 .idea
 *.iml
-
 
 # ignore all __pycache__ folders
 **/__pycache__
 .mypy_cache
 
-# ignore all woo.sh files
-**/woo.sh
 
 .localenv
-
-/h2oheating_be/
-/coolcorp_be/
-/vincipizzeria_nl/
 /test/
 /venv/
-/H2oHeating/project-report.txt
+.venv/
+venv/
+.terraform/
