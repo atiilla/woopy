@@ -8,7 +8,7 @@ from client.product.woo_product_main_layout_gui import WooProductMainLayout
 
 # Build a layout to open sub-screens such as product -> WooCreateProductGui, WooUpdateProductGui, WooGetCategoriesGui, etc.
 
-DRAWER_WIDTH = 120
+DRAWER_WIDTH = 180
 
 class MainLayoutGui(MDApp):
     """
@@ -23,10 +23,6 @@ class MainLayoutGui(MDApp):
         self.drawer.set_state("open")
         self.drawer.width = DRAWER_WIDTH
         self.drawer.anchor = "left"
-        
-        # Set dark theme 
-        self.theme_cls.theme_style = "Dark"
-        self.theme_cls.primary_palette = "Blue"
         
         self.vertical_layout = MDGridLayout(cols=1, padding=10, spacing=10)
         
@@ -47,53 +43,6 @@ class MainLayoutGui(MDApp):
         self.drawer.add_widget(self.vertical_layout)
         
         
-    def init_buttons_style(self):
-        """
-        Initializes the style of the buttons in the GUI.
-        
-        Sets the following style properties for each button:
-        - No background color
-        - Light gray text color
-        - Bold text
-        - Font size of 20
-        - Padding of 10
-        - Width of 200
-        """
-        self.navigate_to_product_button.theme_text_color = "Custom"
-        self.navigate_to_product_button.text_color = 1, 1, 1, 1
-        self.navigate_to_product_button.font_style = "H6"
-        self.navigate_to_product_button.font_size = 20
-        self.navigate_to_product_button.padding = 10
-        self.navigate_to_product_button.width = DRAWER_WIDTH
-        
-        self.navigate_to_category_button.theme_text_color = "Custom"
-        self.navigate_to_category_button.text_color = 1, 1, 1, 1
-        self.navigate_to_category_button.font_style = "H6"
-        self.navigate_to_category_button.font_size = 20
-        self.navigate_to_category_button.padding = 10
-        self.navigate_to_category_button.width = DRAWER_WIDTH
-        
-        self.navigate_to_order_button.theme_text_color = "Custom"
-        self.navigate_to_order_button.text_color = 1, 1, 1, 1
-        self.navigate_to_order_button.font_style = "H6"
-        self.navigate_to_order_button.font_size = 20
-        self.navigate_to_order_button.padding = 10
-        self.navigate_to_order_button.width = DRAWER_WIDTH
-        
-        self.navigate_to_customer_button.theme_text_color = "Custom"
-        self.navigate_to_customer_button.text_color = 1, 1, 1, 1
-        self.navigate_to_customer_button.font_style = "H6"
-        self.navigate_to_customer_button.font_size = 20
-        self.navigate_to_customer_button.padding = 10
-        self.navigate_to_customer_button.width = DRAWER_WIDTH
-        
-        self.close_button.theme_text_color = "Custom"
-        self.close_button.text_color = 1, 1, 1, 1
-        self.close_button.font_style = "H6"
-        self.close_button.font_size = 20
-        self.close_button.padding = 10
-        self.close_button.width = DRAWER_WIDTH
-        
     def build(self):
         """
         Builds the main layout of the application.
@@ -103,8 +52,6 @@ class MainLayoutGui(MDApp):
         """
         screen = MDScreen()
         screen.add_widget(self.drawer)
-        
-        self.init_buttons_style()
         
         # Bind the buttons to their respective functions
         self.navigate_to_product_button.bind(on_release=self.navigate_to_product)
