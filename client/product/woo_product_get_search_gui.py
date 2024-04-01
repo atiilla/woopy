@@ -6,23 +6,25 @@ from kivymd.uix.screen import MDScreen
 from kivymd.uix.textfield import MDTextField
 
 
-class WooGetAllProductsGui(MDApp):
+class WooSearchProductGui(MDApp):
     """
-    WooGetProductsGui class aims to provide a GUI for getting all products in WooCommerce
+    WooSearchProductGui class aims to provide a GUI for searching a product in WooCommerce
     
     Args:
     MDApp: The MDApp class is the base
     
     Methods:
     build: Build method
-    get_products_event: Get products method
+    search_product_event: Search product method
     
     """
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         
-        self.get_products = MDRaisedButton(text="Get Products", on_release=self.get_products_event)
+        self.product_name = MDTextField(hint_text="Product Name")
+        
+        self.search_product = MDRaisedButton(text="Search Product", on_release=self.search_product_event)
         self.product_info = MDLabel()
     
     
@@ -34,21 +36,20 @@ class WooGetAllProductsGui(MDApp):
         
         # Create app layout with GridLayout
         app_layout = MDGridLayout(cols=1, padding=10)
+        app_layout.add_widget(self.product_name)
         
         # Set actions_layout to be at the bottom of the page by setting the height_hint to None
-        app_layout.add_widget(self.get_products)
+        app_layout.add_widget(self.search_product)
         app_layout.add_widget(self.product_info)
         main_screen.add_widget(app_layout)
         
         return main_screen
 
-    def get_products_event(self, *args):
+    def search_product_event(self, *args):
         """
-        Get products method
+        Search product method
         """
-        self.product_info.text = "Getting all products"
+        product_name = self.product_name.text
+        self.product_info.text = f"Product Name: {product_name}"
         
         
-
-
-

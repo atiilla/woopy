@@ -6,7 +6,7 @@ from kivymd.uix.screen import MDScreen
 from kivymd.uix.textfield import MDTextField
 
 
-class WooGetProductGui(MDApp):
+class WooGetOneProductGui(MDApp):
     """
     WooGetProductGui class aims to provide a GUI for getting a product in WooCommerce
     
