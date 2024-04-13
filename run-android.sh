@@ -1,5 +1,6 @@
 #!/bin/bash
 
 pushd store || exit
-briefcase run android -d "@beePhone"
+alias woopygui-android='briefcase create android && briefcase build android && briefcase run android'
+woopygui-android
 popd || exit
