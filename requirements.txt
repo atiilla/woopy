@@ -11,3 +11,4 @@ typing_extensions
 woocommerce
 opencv-python
 flask_cors
+briefcase
