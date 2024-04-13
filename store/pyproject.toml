@@ -3,7 +3,7 @@
 project_name = "WooPyGui"
 bundle = "be.codesapien"
 version = "0.0.1"
-url = "https://github.com/codesapienbe/woopygui"
+url = "https://github.com/atiilla/woopy"
 license = "Apache Software License"
 author = "Yilmaz Mustafa"
 author_email = "ymus@tuta.io"
@@ -23,7 +23,7 @@ test_sources = [
 
 requires = [
 ]
-test_requires = [    "pytest",]
+test_requires = [ "pytest",]
 
 
 [tool.briefcase.app.woopygui.macOS]

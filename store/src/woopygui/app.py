@@ -29,7 +29,6 @@ class WooPyGui(toga.App):
         # Create a full screen webview to display given website URL
         webview = toga.WebView(style=Pack(flex=1))
         # Remove title bar from the webview, make it look like a native app
-        webview.window.user_insets = (0, 0, 0, 0)
         # Remove all margins and paddings, and set the webview to full screen
         webview.style.update({
             'margin': 0,
@@ -39,20 +38,13 @@ class WooPyGui(toga.App):
         # Read website URL from .env file
         webview.url = "https://h2oheating.xyz"
         # Remove title bar from the webview
-        webview.window.user_insets = (0, 0, 0, 0)
         # Add the webview to the main box
         main_box.add(webview)
         # Set main box as the content of the main window
         self.main_window = toga.MainWindow(title=self.formal_name)
         self.main_window.content = main_box
         # Set the main window to full screen and remove the title bar
-        self.main_window.app.window.user_insets = (0, 0, 0, 0)
         self.main_window.app.window.full_screen = True
-        self.main_window.app.window.show_toolbar = False
-        self.main_window.app.window.show_status = False
-        self.main_window.app.window.show_scrollbars = False
-        self.main_window.app.window.show_resize_corner = False
-        self.main_window.app.window.show_full_screen_button = False
         # Show the main window
         self.main_window.show()
         
