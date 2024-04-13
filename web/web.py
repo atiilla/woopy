@@ -6,6 +6,7 @@ from datetime import datetime
 from flask import Flask, jsonify, request, send_file
 from flask_restful import Resource, Api
 from flask_swagger_ui import get_swaggerui_blueprint
+from flask_cors import CORS
 
 from shared.models import (Database, Admin, Website, Cache, Proxy, Vault,
                            Monitoring, Management, Code, Project, Mail, Networks, Volumes)
@@ -15,6 +16,7 @@ logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 api = Api(app)
 
+CORS(app)
 
 class Health(Resource):
     def get(self):
