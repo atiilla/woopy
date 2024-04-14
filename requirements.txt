@@ -12,3 +12,5 @@ woocommerce
 opencv-python
 flask_cors
 briefcase
+toga
+pygame

@@ -1,21 +1,21 @@
 # This project was generated with 0.3.17 using template: https://github.com/beeware/briefcase-template@v0.3.17
 [tool.briefcase]
-project_name = "WooPyGui"
-bundle = "be.codesapien"
+project_name = "woostore"
+bundle = "com.katawoo"
 version = "0.0.1"
-url = "https://github.com/atiilla/woopy"
+url = "https://katawoo.com/woostore"
 license = "Apache Software License"
 author = "Yilmaz Mustafa"
-author_email = "ymus@tuta.io"
+author_email = "yilmaz@katawoo.com"
 
-[tool.briefcase.app.woopygui]
-formal_name = "WooPyGui"
-description = "WooPy API Client having GIO"
+[tool.briefcase.app.woostore]
+formal_name = "woostore"
+description = "WooStore"
 long_description = """More details about the app should go here.
 """
-icon = "src/woopygui/resources/woopygui"
+icon = "src/woostore/resources/woostore"
 sources = [
-    "src/woopygui",
+    "src/woostore",
 ]
 test_sources = [
     "tests",
@@ -23,10 +23,10 @@ test_sources = [
 
 requires = [
 ]
-test_requires = [ "pytest",]
+test_requires = [ "pytest", ]
 
 
-[tool.briefcase.app.woopygui.macOS]
+[tool.briefcase.app.woostore.macOS]
 universal_build = true
 requires = [
     "toga-cocoa~=0.4.0",
@@ -34,13 +34,13 @@ requires = [
 ]
 
 
-[tool.briefcase.app.woopygui.linux]
+[tool.briefcase.app.woostore.linux]
 requires = [
     "toga-gtk~=0.4.0",
 ]
 
 
-[tool.briefcase.app.woopygui.linux.system.debian]
+[tool.briefcase.app.woostore.linux.system.debian]
 system_requires = [
     # Needed to compile pycairo wheel
     "libcairo2-dev",
@@ -59,7 +59,7 @@ system_runtime_requires = [
 ]
 
 
-[tool.briefcase.app.woopygui.linux.system.rhel]
+[tool.briefcase.app.woostore.linux.system.rhel]
 system_requires = [
     # Needed to compile pycairo wheel
     "cairo-gobject-devel",
@@ -79,7 +79,7 @@ system_runtime_requires = [
 ]
 
 
-[tool.briefcase.app.woopygui.linux.system.suse]
+[tool.briefcase.app.woostore.linux.system.suse]
 system_requires = [
     # Needed to compile pycairo wheel
     "cairo-devel",
@@ -100,7 +100,7 @@ system_runtime_requires = [
 ]
 
 
-[tool.briefcase.app.woopygui.linux.system.arch]
+[tool.briefcase.app.woostore.linux.system.arch]
 system_requires = [
     # Needed to compile pycairo wheel
     "cairo",
@@ -128,7 +128,7 @@ system_runtime_requires = [
 ]
 
 
-[tool.briefcase.app.woopygui.linux.appimage]
+[tool.briefcase.app.woostore.linux.appimage]
 manylinux = "manylinux_2_28"
 
 system_requires = [
@@ -150,27 +150,27 @@ linuxdeploy_plugins = [
 ]
 
 
-[tool.briefcase.app.woopygui.linux.flatpak]
+[tool.briefcase.app.woostore.linux.flatpak]
 flatpak_runtime = "org.gnome.Platform"
 flatpak_runtime_version = "45"
 flatpak_sdk = "org.gnome.Sdk"
 
 
-[tool.briefcase.app.woopygui.windows]
+[tool.briefcase.app.woostore.windows]
 requires = [
     "toga-winforms~=0.4.0",
 ]
 
 
 # Mobile deployments
-[tool.briefcase.app.woopygui.iOS]
+[tool.briefcase.app.woostore.iOS]
 requires = [
     "toga-iOS~=0.4.0",
     "std-nslog~=1.0.0",
 ]
 
 
-[tool.briefcase.app.woopygui.android]
+[tool.briefcase.app.woostore.android]
 requires = [
     "toga-android~=0.4.0",
 ]
@@ -186,7 +186,7 @@ build_gradle_dependencies = [
 
 
 # Web deployments
-[tool.briefcase.app.woopygui.web]
+[tool.briefcase.app.woostore.web]
 requires = [
     "toga-web~=0.4.0",
 ]

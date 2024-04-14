@@ -1,15 +1,17 @@
 #!/bin/bash
 
-pushd store || exit
-alias crenv='python3.8 -m venv .venv'
-alias acenv='source .venv/bin/activate'
-alias insenv='pip3 install -r requirements.txt'
-alias deenv='source .venv/bin/deactivate'
-alias woopygui-android='briefcase create android && briefcase build android && briefcase run android'
-alias woopygui-ios='briefcase create ios && briefcase build ios && briefcase run ios'
-alias woopygui-macos='briefcase create macos && briefcase build macos && briefcase run macos'
-alias woopygui-windows='briefcase create windows && briefcase build windows && briefcase run windows'
-alias woopygui-linux='briefcase create linux && briefcase build linux && briefcase run linux'
-alias woopygui-web='briefcase create web && briefcase build web && briefcase run web'
-alias woopygui-all='woopygui-android && woopygui-ios && woopygui-macos && woopygui-windows && woopygui-linux && woopygui-web'
-popd || exit
+alias crenv='python -m venv .venv'
+alias acenv='source .venv/Scripts/activate'
+alias upenv='python -m pip install --upgrade pip'
+alias insenv='upenv && pip3 install toga python-dotenv requests briefcase'
+alias deenv='source .venv/Scripts/deactivate'
+alias bc='python -m briefcase'
+alias bc-new='bc new'
+alias bc-and='bc create android && bc build android && bc run android'
+alias bc-ios='bc create ios && briefcase build ios && bc run ios'
+alias bc-mac='bc create macos && bc build macos && bc run macos'
+alias bc-win='bc create windows && bc build windows && bc run windows'
+alias bc-lin='bc create linux && bc build linux && bc run linux'
+alias bc-web='bc create web && bc build web && bc run web'
+alias bc-clean='rm -rf .venv && rm -rf .briefcase && rm -rf .build && rm -rf .dist && rm -rf .ios'
+
