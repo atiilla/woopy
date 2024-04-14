@@ -6,12 +6,19 @@ import secrets
 
 
 def generate_password() -> str:
+    """
+    Generate a random password
+    """
     # Generate a random token
     token = secrets.token_urlsafe(16)
     return token
 
 
 class Database:
+    """
+    Database class: This class is used to create a database for the website
+    """
+
     def __init__(self, database_name, database_user, database_host, database_port: int = 3306,
                  database_character_set: str = 'utf-8', database_table_prefix: str = "wpapp_"):
         self.database_name = database_name
@@ -25,6 +32,9 @@ class Database:
 
     # String representation of the class is docker-compose.yml data
     def to_docker_compose(self):
+        """
+        This function returns the docker-compose.yml data for the database
+        """
         return f"""
     database:
         image: mariadb:11.1
@@ -55,6 +65,9 @@ class Database:
         """
 
     def to_kubernetes(self):
+        """
+        This function returns the kubernetes data for the database
+        """
         return f"""
         apiVersion: v1
         kind: Service
@@ -108,6 +121,9 @@ class Database:
         """
 
     def to_vagrant_vm(self):
+        """
+        This function returns the vagrant data for the database
+        """
         return f"""
         config.vm.define "database" do |database|
             database.vm.box = "ubuntu/focal64"
@@ -132,14 +148,20 @@ class Database:
 
 
 class Cache:
+    """
+    Cache class: This class is used to create a cache for the website
+    """
+
     def __init__(self, cache_host, cache_port, cache_username: str = "root"):
         self.cache_host = cache_host
         self.cache_port = cache_port
         self.cache_username = cache_username
         self.cache_password = generate_password()
 
-    # String representation of the class is docker-compose.yml data
     def to_docker_compose(self):
+        """
+        This function returns the docker-compose.yml data for the cache
+        """
         return f"""
     cache:
         image: redis:latest
@@ -173,6 +195,9 @@ class Cache:
         """
 
     def to_kubernetes(self):
+        """
+        This function returns the kubernetes data for the cache
+        """
         return f"""
         apiVersion: v1
         kind: Service
@@ -230,7 +255,10 @@ class Cache:
         """
 
     def to_vagrant_vm(self):
-        return f"""
+        """
+        This function returns the vagrant data for the cache
+        """
+        return """
         config.vm.define "cache" do |cache|
             cache.vm.box = "ubuntu/focal64"
             cache.vm.hostname = "cache"
@@ -249,6 +277,10 @@ class Cache:
 
 
 class Mail:
+    """
+    Mail class: This class is used to create a mail server for the website
+    """
+
     def __init__(self, mail_hostname: str, mail_username: str, mail_port: int = 587, mail_encryption: str = "tls",
                  mail_protocol: str = "smtp"):
         self.mail_hostname = mail_hostname
@@ -259,6 +291,9 @@ class Mail:
         self.mail_protocol = mail_protocol
 
     def to_docker_compose(self):
+        """
+        This function returns the docker-compose.yml data for the mail server
+        """
         return f"""
     mail:
         image: mailhog/mailhog
@@ -288,7 +323,10 @@ class Mail:
         """
 
     def to_kubernetes(self):
-        return f"""
+        """
+        This function returns the kubernetes data for the mail server
+        """
+        return """
         apiVersion: v1
         kind: Service
         metadata:
@@ -329,7 +367,10 @@ class Mail:
         """
 
     def to_vagrant_vm(self):
-        return f"""
+        """
+        This function returns the vagrant data for the mail server
+        """
+        return """
         config.vm.define "mail" do |mail|
             mail.vm.box = "ubuntu/focal64"
             mail.vm.hostname = "mail"
@@ -374,7 +415,11 @@ class Mail:
 
 
 class Website:
-    def __init__(self, title: str, host: str, user: str, email: str, database: Database, mail: Mail, cache: Cache):
+    """
+    Website class: This class is used to create a website for the user
+    """
+
+    def __init__(self, title: str, description: str, host: str, user: str, email: str, database: Database, mail: Mail, cache: Cache):
         self.database_host = f"{database.database_host}"
         self.database_port = f"{database.database_port}"
         self.database_name = f"{database.database_name}"
@@ -383,6 +428,7 @@ class Website:
         self.database_table_prefix = f"{database.database_table_prefix}"
         self.website_hostname = f"{host}"
         self.website_title = f"{title}"
+        self.website_description = f"{description}"
         self.website_admin_username = f"{user}"
         # generate a hashed password with SHA-256 and base64 encoding
         self.website_admin_password = generate_password()
@@ -396,8 +442,10 @@ class Website:
         self.cache_port = f"{cache.cache_port}"
         self.cache_password = f"{cache.cache_password}"
 
-    # String representation of the class is docker-compose.yml data
     def to_docker_compose(self):
+        """
+        This function returns the docker-compose.yml data for the website
+        """
         return f"""
     website:
         image: bitnami/wordpress:latest
@@ -455,6 +503,9 @@ class Website:
         """
 
     def to_kubernetes(self):
+        """
+        This function returns the kubernetes data for the website
+        """
         return f"""
         apiVersion: v1
         kind: Service
@@ -538,7 +589,10 @@ class Website:
         """
 
     def to_vagrant_vm(self):
-        return f"""
+        """
+        This function returns the vagrant data for the website
+        """
+        return """
         config.vm.define "website" do |website|
             website.vm.box = "ubuntu/focal64"
             website.vm.hostname = "website"
@@ -575,6 +629,10 @@ class Website:
 
 
 class Admin:
+    """
+    Admin class: This class is used to create an admin panel for the website
+    """
+
     def __init__(self, database: Database, website: Website):
         self.database_host = f"{database.database_host}"
         self.database_port = f"{database.database_port}"
@@ -584,8 +642,10 @@ class Admin:
         self.website_admin_username = f"{website.website_admin_username}"
         self.website_admin_password = f"{website.website_admin_password}"
 
-    # String representation of the class is docker-compose.yml data
     def to_docker_compose(self):
+        """
+        This function returns the docker-compose.yml data for the admin panel
+        """
         return f"""
     admin:
         image: phpmyadmin:latest
@@ -624,6 +684,9 @@ class Admin:
         """
 
     def to_kubernetes(self):
+        """
+        This function returns the kubernetes data for the admin panel
+        """
         return f"""
         apiVersion: v1
         kind: Service
@@ -673,7 +736,10 @@ class Admin:
         """
 
     def to_vagrant_vm(self):
-        return f"""
+        """
+        This function returns the vagrant data for the admin panel
+        """
+        return """
         config.vm.define "admin" do |admin|
             admin.vm.box = "ubuntu/focal64"
             admin.vm.hostname = "admin"
@@ -692,6 +758,10 @@ class Admin:
 
 
 class Proxy:
+    """
+    Proxy class: This class is used to create a proxy for the website
+    """
+
     def __init__(self, title: str, host: str, website: Website, port: int = 443, username: str = "root"):
         self.website_hostname = f"{website.website_hostname}"
         self.website_admin_email = f"{website.website_admin_email}"
@@ -704,8 +774,10 @@ class Proxy:
         self.proxy_email = f"{username}@{host}"
         self.proxy_password = generate_password()
 
-    # String representation of the class is docker-compose.yml data
     def to_docker_compose(self):
+        """
+        This function returns the docker-compose.yml data for the proxy
+        """
         return f"""
     proxy:
         image: traefik:2.9
@@ -766,6 +838,9 @@ class Proxy:
         """
 
     def to_kubernetes(self):
+        """
+        This function returns the kubernetes data for the proxy
+        """
         return f"""
         apiVersion: v1
         kind: Service
@@ -839,7 +914,10 @@ class Proxy:
         """
 
     def to_vagrant_vm(self):
-        return f"""
+        """
+        This function returns the vagrant data for the proxy
+        """
+        return """
         config.vm.define "proxy" do |proxy|
             proxy.vm.box = "ubuntu/focal64"
             proxy.vm.hostname = "proxy"
@@ -884,6 +962,10 @@ class Proxy:
 
 
 class Monitoring:
+    """
+    Monitoring class: This class is used to create a monitoring system for the host
+    """
+
     def __init__(self, host_hostname: str, host_ip, host_mac, host_cpu, host_ram, host_os, host_kernel, host_docker,
                  monitoring_host: str = "monitoring", monitoring_port: int = 8080, monitoring_username: str = "root"):
         self.host_hostname = host_hostname
@@ -900,8 +982,10 @@ class Monitoring:
         self.montiroing_email = f"{monitoring_username}@{host_hostname}"
         self.monitoring_password = generate_password()
 
-    # String representation of the class is docker-compose.yml data
     def to_docker_compose(self):
+        """
+        This function returns the docker-compose.yml data for the monitoring system
+        """
         return f"""
     monitoring:
         image: gcr.io/cadvisor/cadvisor:v0.39.0
@@ -938,6 +1022,9 @@ class Monitoring:
         """
 
     def to_kubernetes(self):
+        """
+        This function returns the kubernetes data for the monitoring system
+        """
         return f"""
         apiVersion: v1
         kind: Service
@@ -1021,7 +1108,10 @@ class Monitoring:
         """
 
     def to_vagrant_vm(self):
-        return f"""
+        """
+        This function returns the vagrant data for the monitoring system
+        """
+        return """
         config.vm.define "monitoring" do |monitoring|
             monitoring.vm.box = "ubuntu/focal64"
             monitoring.vm.hostname = "monitoring"
@@ -1066,6 +1156,10 @@ class Monitoring:
 
 
 class Management:
+    """
+    Management class: This class is used to create a management system for the website
+    """
+
     def __init__(self, website, management_host="management", management_port=9000, management_username="root"):
         self.website_hostname = f"{website.website_hostname}"
         self.website_admin_password = f"{website.website_admin_password}"
@@ -1075,8 +1169,10 @@ class Management:
         self.management_email = f"{management_username}@{management_host}"
         self.management_password = generate_password()
 
-    # String representation of the class is docker-compose.yml data
     def to_docker_compose(self):
+        """
+        This function returns the docker-compose.yml data for the management system
+        """
         return f"""
     management:
         image: portainer/portainer-ce:latest
@@ -1114,7 +1210,10 @@ class Management:
         """
 
     def to_kubernetes(self):
-        return f"""
+        """
+        This function returns the kubernetes data for the management system
+        """
+        return """
         apiVersion: v1
         kind: Service
         metadata:
@@ -1167,7 +1266,10 @@ class Management:
         """
 
     def to_vagrant_vm(self):
-        return f"""
+        """
+        This function returns the vagrant data for the management system
+        """
+        return """
         config.vm.define "management" do |management|
             management.vm.box = "ubuntu/focal64"
             management.vm.hostname = "management"
@@ -1212,12 +1314,18 @@ class Management:
 
 
 class Networks:
+    """
+    Networks class: This class is used to create networks for the website and the proxy
+    """
+
     def __init__(self, website_network: str = 'website-network', proxy_network: str = 'proxy-network'):
         self.website_network = website_network
         self.proxy_network = proxy_network
 
-    # String representation of the class is docker-compose.yml data
     def to_docker_compose(self):
+        """
+        This function returns the docker-compose.yml data for the networks
+        """
         return f"""
 networks:
     {self.website_network}:
@@ -1228,6 +1336,10 @@ networks:
 
 
 class Volumes:
+    """
+    Volumes class: This class is used to create volumes for the website and the proxy
+    """
+
     def __init__(self, database_data: str = 'database-data', website_data: str = 'website-data',
                  proxy_data: str = 'proxy-data', admin_data: str = 'admin-data', cache_data: str = 'cache-data',
                  management_data: str = 'management-data', code_data: str = 'vscode-data'):
@@ -1239,8 +1351,10 @@ class Volumes:
         self.management_data = management_data
         self.code_data = code_data
 
-    # String representation of the class is docker-compose.yml data
     def to_docker_compose(self):
+        """
+        This function returns the docker-compose.yml data for the volumes
+        """
         return f"""
 volumes:
     {self.database_data}:
@@ -1254,6 +1368,10 @@ volumes:
 
 
 class Vault:
+    """
+    Vault class: This class is used to create a vault for the website
+    """
+
     def __init__(self, website: Website, vault_host: str = "vault", vault_port: int = 8080,
                  vault_username: str = "root"):
         self.website_hostname = f"{website.website_hostname}"
@@ -1265,8 +1383,10 @@ class Vault:
         self.vault_email = f"{vault_username}@{vault_host}"
         self.vault_password = generate_password()
 
-    # String representation of the class is docker-compose.yml data
     def to_docker_compose(self):
+        """
+        This function returns the docker-compose.yml data for the vault
+        """
         return f"""
     vault:
         image: alpine:latest
@@ -1292,7 +1412,10 @@ class Vault:
         """
 
     def to_kubernetes(self):
-        return f"""
+        """
+        This function returns the kubernetes data for the vault
+        """
+        return """
         apiVersion: v1
         kind: Service
         metadata:
@@ -1332,6 +1455,10 @@ class Vault:
 
 
 class Code:
+    """
+    Code class: This class is used to create a code server for the website
+    """
+
     def __init__(self, website: Website, code_host: str = "code", code_port: int = 8080, code_username: str = "root",
                  proxy_domain: str = "proxy", proxy_port: int = 8080):
         self.website_hostname = f"{website.website_hostname}"
@@ -1345,8 +1472,10 @@ class Code:
         self.proxy_domain = f"{proxy_domain}"
         self.proxy_port = f"{proxy_port}"
 
-    # String representation of the class is docker-compose.yml data
     def to_docker_compose(self):
+        """
+        This function returns the docker-compose.yml data for the code server
+        """
         return f"""
     code:
         image: codercom/code-server
@@ -1383,6 +1512,9 @@ class Code:
         """
 
     def to_kubernetes(self):
+        """
+        This function returns the kubernetes data for the code server
+        """
         return f"""
         apiVersion: v1
         kind: Service
@@ -1432,7 +1564,13 @@ class Code:
         """
 
     def to_vagrant_vm(self):
-        return f"""
+        """
+        Converts the current object to a Vagrant virtual machine configuration.
+
+        Returns:
+            str: Vagrant virtual machine configuration as a multi-line string.
+        """
+        return """
         config.vm.define "code" do |code|
             code.vm.box = "ubuntu/focal64"
             code.vm.hostname = "code"
@@ -1476,13 +1614,348 @@ class Code:
         """
 
 
+class Application:
+    """
+    Represents an application associated with a website.
+
+    Attributes:
+        website (Website): The website object associated with the application.
+        version (str): The version of the application (default is "1.0").
+    """
+
+    def __init__(self, website: Website, version: str = "1.0"):
+        """
+        Initializes a new instance of the Application class.
+
+        Args:
+            website (Website): The website object associated with the application.
+            version (str, optional): The version of the application (default is "1.0").
+        """
+        self.project_name = website.website_hostname
+        self.app_name = website.website_hostname
+        # reverse the host name. for example if the host url is "h2oheating.xyz" then the bundle will be "xyz.h2oheating"
+        self.bundle = ".".join(website.website_hostname.split(".")[::-1])
+        self.version = version
+        self.url = website.website_hostname
+        self.license = "MIT license"
+        self.author = website.website_admin_username
+        self.author_email = website.website_admin_email
+        self.formal_name = website.website_hostname
+        self.description = website.website_description
+        self.long_description = website.website_description
+
+    def to_docker_compose(self):
+        """
+        Converts the Application object to a docker-compose.yml data string.
+
+        Returns:
+            str: The docker-compose.yml data string representing the Application object.
+        """
+
+        return f"""
+    application:
+        image: alpine:latest
+        container_name: application
+        command: >
+        
+            # Install vim, nano, and git
+            apk add vim
+            apk add nano
+            apk add git
+        
+            # Install JDK17, Ant, Maven, Gradle, and Python
+            apk add openjdk17
+            apk add ant
+            apk add maven
+            apk add gradle
+            apk add python3
+            apk add py3-pip
+            apk add py3-virtualenv
+            apk add py3-wheel
+            apk add py3-setuptools
+            apk add py3-cffi
+            apk add py3-cryptography
+            apk add py3-openssl
+            apk add py3-pycparser
+            apk add py3-idna
+            apk add py3-requests
+            apk add py3-urllib3
+            apk add py3-chardet
+            apk add py3-certifi
+            
+            # Install Android Studio
+            apk add android-studio
+            apk add android-sdk
+            apk add android-sdk-platform-tools
+            
+            # Install Briefcase and Toga
+            pip install briefcase toga
+            briefcase new -Q "project_name={self.project_name}" -Q "app_name={self.app_name}" -Q "bundle={self.bundle}" -Q "version={self.version}" -Q "url={self.url}" -Q "license={self.license}" -Q "author={self.author}" -Q "author_email={self.author_email}" -Q "formal_name={self.formal_name}" -Q "description={self.description}" -Q "long_description={self.long_description}" --no-input
+            
+            pushd {self.project_name} || exit
+            app_py_path="src/{self.app_name}/app.py"
+            if [ -f $app_py_path ]; then
+                rm -rf $app_py_path
+            fi
+            
+            echo "Updating app.py code to include webview..."
+            echo "import toga" > $app_py_path
+            echo "from toga.style import Pack" >> $app_py_path
+            
+            echo "class {self.app_name}(toga.App):" >> $app_py_path
+            
+            echo "    def startup(self):" >> $app_py_path
+            echo "        self.main_window = toga.MainWindow()" >> $app_py_path
+            echo "        load_webview(self.main_window, "{self.url}")" >> $app_py_path
+            echo "        self.main_window.show()" >> $app_py_path
+            
+            echo "def load_webview(widget, url):" >> $app_py_path
+            echo "    webview = toga.WebView(style=Pack(flex=1))" >> $app_py_path
+            echo "    webview.url = url" >> $app_py_path
+            echo "    widget.content = webview" >> $app_py_path
+            
+            echo "def main():" >> $app_py_path
+            echo "    return {self.app_name}()" >> $app_py_path
+            
+            
+            echo "if __name__ == '__main__':" >> $app_py_path
+            echo "    main().main_loop()" >> $app_py_path
+            
+            echo "Updating app.py code to include webview...done"
+            
+            echo "Building the application..."
+            briefcase package linux
+            briefcase package android
+            echo "Building the application...done"
+            
+            popd || exit
+            
+        networks:
+            - proxy-network
+        depends_on:
+            - website
+        links:
+            - website:website
+        labels:
+            - "traefik.enable=false"
+        restart: unless-stopped
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+        """
+
+    def to_kubernetes(self):
+        """
+        Converts the Application object to a Kubernetes data string.
+
+        Returns:
+            str: The Kubernetes data string representing the Application object.
+        """
+        return """
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: application
+          labels:
+            app: application
+        spec:
+            ports:
+            - port: 80
+                targetPort: 80
+            selector:
+                app: application
+            type: ClusterIP
+        ---
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+            name: application
+            labels:
+                app: application
+        spec:
+            selector:
+                matchLabels:
+                    app: application
+            template:
+                metadata:
+                    labels:
+                        app: application
+                spec:
+                    containers:
+                    - name: application
+                        image: alpine:latest
+                        command:
+                        - /bin/sh
+                        - -c
+                        - |
+                        -   # Install vim, nano, and git
+                        -   apk add vim
+                        -   apk add nano
+                        -   apk add git
+                        -   # Install JDK17, Ant, Maven, Gradle, and Python
+                        -   apk add openjdk17
+                        -   apk add ant
+                        -   apk add maven
+                        -   apk add gradle
+                        -   apk add python3
+                        -   apk add py3-pip
+                        -   apk add py3-virtualenv
+                        -   apk add py3-wheel
+                        -   apk add py3-setuptools
+                        -   apk add py3-cffi
+                        -   apk add py3-cryptography
+                        -   apk add py3-openssl
+                        -   apk add py3-pycparser
+                        -   apk add py3-idna
+                        -   apk add py3-requests
+                        -   apk add py3-urllib3
+                        -   apk add py3-chardet
+                        -   apk add py3-certifi
+                        -   # Install Android Studio
+                        -   apk add android-studio
+                        -   apk add android-sdk
+                        -   apk add android-sdk-platform-tools
+                        -   # Install Briefcase and Toga
+                        -   pip install briefcase toga
+                        -   briefcase new -Q "project_name={self.project_name}" -Q "app_name={self.app_name}" -Q "bundle={self.bundle}" -Q "version={self.version}" -Q "url={self.url}" -Q "license={self.license}" -Q "author={self.author}" -Q "author_email={self.author_email}" -Q "formal_name={self.formal_name}" -Q "description={self.description}" -Q "long_description={self.long_description}" --no-input
+                        -   pushd {self.project_name} || exit
+                        -   app_py_path="src/{self.app_name}/app.py"
+                        -   if [ -f $app_py_path ]; then
+                        -       rm -rf $app_py_path
+                        -   fi
+                        -   echo "Updating app.py code to include webview..."
+                        -   echo "import toga" > $app_py_path
+                        -   echo "from toga.style import Pack" >> $app_py_path
+                        -   echo -e "\n" >> $app_py_path
+                        -   echo -e "\n" >> $app_py_path
+                        -   echo "class {self.app_name}(toga.App):" >> $app_py_path
+                        -   echo -e "\n" >> $app_py_path
+                        -   echo "    def startup(self):" >> $app_py_path
+                        -   echo "        self.main_window = toga.MainWindow()" >> $app_py_path
+                        -   echo "        load_webview(self.main_window, "{self.url}")" >> $app_py_path
+                        -   echo "        self.main_window.show()" >> $app_py_path
+                        -   echo -e "\n" >> $app_py_path
+                        -   echo "def load_webview(widget, url):" >> $app_py_path
+                        -   echo "    webview = toga.WebView(style=Pack(flex=1))" >> $app_py_path
+                        -   echo "    webview.url = url" >> $app_py_path
+                        -   echo "    widget.content = webview" >> $app_py_path
+                        -   echo -e "\n" >> $app_py_path
+                        -   echo "def main():" >> $app_py_path
+                        -   echo "    return {self.app_name}()" >> $app_py_path
+                        -   echo -e "\n" >> $app_py_path
+                        -   echo -e "\n" >> $app_py_path
+                        -   echo "if __name__ == '__main__':" >> $app_py_path
+                        -   echo "    main().main_loop()" >> $app_py_path
+                        -   echo -e "\n" >> $app_py_path
+                        -   echo "Updating app.py code to include webview...done"
+                        -   echo "Building the application..."
+                        -   briefcase package linux
+                        -   briefcase package android
+                        -   echo "Building the application...done"
+                        -   popd || exit
+                    ports:
+                    - containerPort: 80
+                    volumeMounts:
+                    - mountPath: /var/run/docker.sock
+                        name: docker-socket
+                    - mountPath: /data
+                        name: data
+                    env:
+                    - name: TZ
+                        value: Europe/Brussels
+                    
+                    volumes:
+                    - name: docker-socket
+                        hostPath:
+                        path: /var/run/docker.sock
+                    - name: data
+                        hostPath:
+                        path: /data
+                        
+        """
+
+    def to_vagrant_vm(self):
+        """
+        Converts the Application object to a Vagrant virtual machine configuration.
+
+        Returns:
+            str: Vagrant virtual machine configuration as a multi-line string.
+        """
+        return """
+        config.vm.define "application" do |application|
+            application.vm.box = "ubuntu/focal64"
+            application.vm.hostname = "application"
+            application.vm.network "private_network", ip: "
+            application.vm.provider "virtualbox" do |vb|
+                vb.memory = "1024"
+                vb.cpus = "1"
+            end
+            application.vm.provision "shell", inline: <<-SHELL
+                sudo apt-get update
+                sudo apt-get install -y apache2-utils
+                sudo apt-get install -y apt-transport-https
+                sudo apt-get install -y ca-certificates
+                sudo apt-get install -y curl
+                sudo apt-get install -y gnupg
+                sudo apt-get install -y lsb-release
+                sudo apt-get install -y wget
+                sudo apt-get install -y redis-server
+                sudo apt-get install -y mariadb-client
+                sudo apt-get install -y unzip
+                sudo apt-get install -y docker.io
+                sudo apt-get install -y docker-compose
+                sudo apt-get install -y apache2
+                sudo apt-get install -y php
+                sudo apt-get install -y php-mysql
+                sudo apt-get install -y php-curl
+                sudo apt-get install -y php-gd
+                sudo apt-get install -y php-intl
+                sudo apt-get install -y php-mbstring
+                sudo apt-get install -y php-soap
+                sudo apt-get install -y php-xml
+                sudo apt-get install -y php-xmlrpc
+                sudo apt-get install -y php-zip
+                sudo systemctl enable docker
+                sudo systemctl start docker
+                sudo systemctl enable apache2
+                sudo systemctl start apache2
+                sudo wget
+                
+                
+            SHELL
+        end
+        """
+
+
 class Project:
-    def __init__(self, project_base_dir: str = None, project_name: str = os.path.basename(os.getcwd()),
-                 project_description: str = "Project description", project_author: str = os.getlogin(),
-                 project_email: str = "Project email", database: Database = None, admin: Admin = None,
+    """
+    Represents a project with multiple services.
+    """
+
+    def __init__(self,
+                 project_base_dir: str = None,
+                 project_name: str = os.path.basename(os.getcwd()),
+                 project_description: str = "Project description",
+                 project_author: str = os.getlogin(),
+                 project_email: str = "Project email",
                  website: Website = None,
-                 proxy: Proxy = None, cache: Cache = None, monitoring: Monitoring = None, management: Management = None,
-                 networks: Networks = None, volumes: Volumes = None, vault: Vault = None, code: Code = None):
+                 database: Database = None,
+                 cache: Cache = None,
+                 admin: Admin = None,
+                 proxy: Proxy = None,
+                 monitoring: Monitoring = None,
+                 management: Management = None,
+                 vault: Vault = None,
+                 code: Code = None,
+                 application: Application = None,
+                 networks: Networks = None,
+                 volumes: Volumes = None
+                 ):
+        """
+        Initializes a new instance of the Project class.
+        """
         if project_base_dir is None:
             project_base_dir = os.path.join(os.getcwd(), project_name)
         self.project_base_dir = project_base_dir
@@ -1501,8 +1974,12 @@ class Project:
         self.volumes = volumes
         self.vault = vault
         self.code = code
+        self.application = application
 
     def get_docker_compose_data(self):
+        """
+        Converts the Project object to a docker-compose.yml data string.
+        """
         docker_compose_yaml = f"""
 version: "3.9"
 
@@ -1516,6 +1993,7 @@ services:
     {self.management.to_docker_compose()}
     {self.vault.to_docker_compose()}
     {self.code.to_docker_compose()}
+    {self.application.to_docker_compose()}
 {self.networks.to_docker_compose()}
 {self.volumes.to_docker_compose()}
 """
@@ -1523,6 +2001,9 @@ services:
         return docker_compose_yaml
 
     def get_project_report(self):
+        """
+        Generates a report for the project.
+        """
         report = f"""
 Project: {self.project_name}
 Description: {self.project_description}
@@ -1568,11 +2049,31 @@ Code Port: {self.code.code_port}
 Code Username: {self.code.code_username}
 Code Password: {self.code.code_password}
 -------------------------------------------------------------
+Application Name: {self.application.app_name}
+Application Version: {self.application.version}
+Application URL: {self.application.url}
+Application License: {self.application.license}
+Application Author: {self.application.author}
+Application Author Email: {self.application.author_email}
+Application Formal Name: {self.application.formal_name}
+Application Description: {self.application.description}
+Application Long Description: {self.application.long_description}'
+-------------------------------------------------------------
+
+Networks:
+{self.networks.to_docker_compose()}
+-------------------------------------------------------------
+Volumes:
+{self.volumes.to_docker_compose()}
+-------------------------------------------------------------
         """
 
         return report
 
     def get_kubernetes_data(self):
+        """
+        Converts the Project object to a Kubernetes data string.
+        """
         kubernetes_yaml = f"""
 apiVersion: v1
 kind: Namespace

@@ -4,12 +4,13 @@ import tempfile
 from datetime import datetime
 
 from flask import Flask, jsonify, request, send_file
-from flask_restful import Resource, Api
-from flask_swagger_ui import get_swaggerui_blueprint
 from flask_cors import CORS
+from flask_restful import Api, Resource
+from flask_swagger_ui import get_swaggerui_blueprint
 
-from shared.models import (Database, Admin, Website, Cache, Proxy, Vault,
-                           Monitoring, Management, Code, Project, Mail, Networks, Volumes)
+from shared.models import (Admin, Application, Cache, Code, Database, Mail,
+                           Management, Monitoring, Networks, Project, Proxy,
+                           Vault, Volumes, Website)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -31,6 +32,11 @@ api.add_resource(Health, '/health')
 
 
 class DockerCompose(Resource):
+    """
+    Class to generate a docker-compose.yml file
+    Args:
+        Resource (_type_): _description_
+    """
     def post(self):
         """
         Get the docker-compose.yml file
@@ -70,7 +76,8 @@ class DockerCompose(Resource):
                             database_host=env['DATABASE_HOST'])
         email = Mail(env['MAIL_SMTP_HOST'], env['MAIL_SMTP_USER'])
         cache = Cache(env['CACHE_HOST'], env['CACHE_PORT'])
-        website = Website(title=env['WEBSITE_TITLE'], host=env['WEBSITE_HOSTNAME'], user=env['WEBSITE_ADMIN_USERNAME'],
+        website = Website(title=env['WEBSITE_TITLE'], description=env['WEBSITE_DESCRIPTION'],
+                          host=env['WEBSITE_HOSTNAME'], user=env['WEBSITE_ADMIN_USERNAME'],
                           email=env['WEBSITE_ADMIN_EMAIL'], database=database, mail=email, cache=cache)
         admin = Admin(database, website)
         proxy = Proxy(env['PROXY_TITLE'], env['PROXY_HOSTNAME'], website)
@@ -79,6 +86,8 @@ class DockerCompose(Resource):
         management = Management(website)
         vault = Vault(website)
         code = Code(website)
+        
+        application = Application(website, version="1.0")
 
         networks = Networks()
         volumes = Volumes()
@@ -86,18 +95,19 @@ class DockerCompose(Resource):
         project = Project(
             project_base_dir=os.path.join(os.getcwd(), website.website_title),
             project_name=website.website_title,
-            project_email=website.website_admin_email,
+            project_description=f"WooCommerce project for {website.website_description}",
             project_author=website.website_admin_username,
-            project_description=f"WooCommerce project for {website.website_title}",
+            project_email=website.website_admin_email,
             website=website,
             database=database,
-            admin=admin,
             cache=cache,
+            admin=admin,
             proxy=proxy,
             monitoring=monitoring,
             management=management,
             vault=vault,
             code=code,
+            application=application,
             networks=networks,
             volumes=volumes
         )

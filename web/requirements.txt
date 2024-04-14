@@ -1,0 +1,6 @@
+flask
+flask_swagger_ui
+flask-restful
+python-dotenv
+requests
+flask_cors

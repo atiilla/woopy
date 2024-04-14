@@ -11,6 +11,12 @@ typing_extensions
 woocommerce
 opencv-python
 flask_cors
-briefcase
 toga
 pygame
+black
+briefcase
+flake8
+pre-commit
+pytest
+toml
+tox

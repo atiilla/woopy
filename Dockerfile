@@ -7,12 +7,13 @@ COPY requirements.txt /app
 COPY test/.env /app
 
 # Copy shared, native, cli, and web files to the container
-COPY shared /app/shared
-COPY native /app/native
-COPY web /app/web
+COPY bridge /app/bridge
 COPY cli /app/cli
 COPY client /app/client
-COPY bridge /app/bridge
+COPY native /app/native
+COPY shared /app/shared
+COPY web /app/web
+
 
 # Install the required dependencies
 RUN pip3 install -r /app/requirements.txt
