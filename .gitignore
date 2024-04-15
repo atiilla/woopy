@@ -82,3 +82,5 @@ gui.specs
 .venv/
 venv/
 .terraform/
+
+app/coolcorp
