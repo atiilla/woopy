@@ -1,7 +1,4 @@
 docker
-flask
-flask_swagger_ui
-flask-restful
 typer
 kivy
 kivymd
@@ -10,13 +7,3 @@ requests
 typing_extensions
 woocommerce
 opencv-python
-flask_cors
-toga
-pygame
-black
-briefcase
-flake8
-pre-commit
-pytest
-toml
-tox
