@@ -14,4 +14,4 @@ RUN pip3 install -r requirements.txt
 COPY entrypoint.sh entrypoint.sh
 RUN chmod +x entrypoint.sh
 
-# podman run -it --rm --name=vinci application:latest bash
+# podman run -it --rm --name=demoapp woopy-app:latest bash

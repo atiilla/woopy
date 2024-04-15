@@ -8,14 +8,18 @@ RUN pip3 install --upgrade pip
 RUN python3 -m venv venv
 RUN . venv/bin/activate
 
-COPY ../web/requirements.txt requirements.txt
+COPY requirements.txt requirements.txt
+COPY __init__.py __init__.py
+COPY __main__.py __main__.py
+COPY web.py web.py
+COPY .env .env
+
 RUN pip3 install -r requirements.txt
 
-COPY ../web/__init__.py app/__init__.py
-COPY ../web/__main__.py app/__main__.py
-COPY ../web/web.py app/web.py
-COPY ../web/.env app/.env
+ENV FLASK_APP=web.py
 
 CMD ["python3", "-m" , "flask", "run", "--host=0.0.0.0"]
 
 EXPOSE 5000
+
+# podman run --rm -it -p 5000:5000 --name=woopy-web woopy-web:latest
