@@ -194,8 +194,6 @@ class Cache:
             - website-network
         depends_on:
             - website
-        links:
-            - website:website
         labels:
             - "traefik.enable=false"
         restart: unless-stopped
@@ -322,8 +320,6 @@ class Mail:
             - proxy-network
         depends_on:
             - website
-        links:
-            - website:website
         labels:
             - "traefik.enable=false"
         restart: unless-stopped
@@ -492,8 +488,6 @@ class Website:
             - proxy-network
         depends_on:
             - database
-        links:
-            - database:database
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.wordpress.rule=Host(`{self.website_hostname}`)"
@@ -673,8 +667,6 @@ class Admin:
             - proxy-network
         depends_on:
             - database
-        links:
-            - database:database
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.{self.website_hostname}`)"
@@ -821,8 +813,6 @@ class Proxy:
             - proxy-network
         depends_on:
             - website
-        links:
-            - website:website
         ports:
             - "8080:80"
             - "443:443"
@@ -1021,8 +1011,6 @@ class Monitoring:
             - proxy-network
         depends_on:
             - website
-        links:
-            - website:website
         labels:
             - "traefik.enable=false"
         restart: unless-stopped
@@ -1197,13 +1185,11 @@ class Management:
             - management-data:/data
         networks:
             - proxy-network
-        links:
-            - website:website
-            - database:database
-            - cache:cache
-            - proxy:proxy
-            - monitoring:monitoring
-            - admin:admin
+        depends_on:
+            - website
+            - database
+            - cache
+            - proxy
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.portainer.rule=Host(`portainer.{self.website_hostname}`)"
@@ -1411,8 +1397,6 @@ class Vault:
             - proxy-network
         depends_on:
             - website
-        links:
-            - website:website
         labels:
             - "traefik.enable=false"
         restart: unless-stopped
@@ -1504,8 +1488,6 @@ class Code:
             - proxy-network
         depends_on:
             - website
-        links:
-            - website:website
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.vscode.rule=Host(`vscode.{self.website_hostname}`)"
@@ -1664,90 +1646,14 @@ class Application:
             str: The docker-compose.yml data string representing the Application object.
         """
 
-        return f"""
+        return """
     application:
-        image: alpine:latest
+        image: woopy-app:latest
         container_name: application
-        command: >
-        
-            # Install vim, nano, and git
-            apk add vim
-            apk add nano
-            apk add git
-        
-            # Install JDK17, Ant, Maven, Gradle, and Python
-            apk add openjdk17
-            apk add ant
-            apk add maven
-            apk add gradle
-            apk add python3
-            apk add py3-pip
-            apk add py3-virtualenv
-            apk add py3-wheel
-            apk add py3-setuptools
-            apk add py3-cffi
-            apk add py3-cryptography
-            apk add py3-openssl
-            apk add py3-pycparser
-            apk add py3-idna
-            apk add py3-requests
-            apk add py3-urllib3
-            apk add py3-chardet
-            apk add py3-certifi
-            
-            # Install Android Studio
-            apk add android-studio
-            apk add android-sdk
-            apk add android-sdk-platform-tools
-            
-            # Install Briefcase and Toga
-            pip install briefcase toga
-            briefcase new -Q "project_name={self.project_name}" -Q "app_name={self.app_name}" -Q "bundle={self.bundle}" -Q "version={self.version}" -Q "url={self.url}" -Q "license={self.license}" -Q "author={self.author}" -Q "author_email={self.author_email}" -Q "formal_name={self.formal_name}" -Q "description={self.description}" -Q "long_description={self.long_description}" --no-input
-            
-            pushd {self.project_name} || exit
-            app_py_path="src/{self.app_name}/app.py"
-            if [ -f $app_py_path ]; then
-                rm -rf $app_py_path
-            fi
-            
-            echo "Updating app.py code to include webview..."
-            echo "import toga" > $app_py_path
-            echo "from toga.style import Pack" >> $app_py_path
-            
-            echo "class {self.app_name}(toga.App):" >> $app_py_path
-            
-            echo "    def startup(self):" >> $app_py_path
-            echo "        self.main_window = toga.MainWindow()" >> $app_py_path
-            echo "        load_webview(self.main_window, "{self.url}")" >> $app_py_path
-            echo "        self.main_window.show()" >> $app_py_path
-            
-            echo "def load_webview(widget, url):" >> $app_py_path
-            echo "    webview = toga.WebView(style=Pack(flex=1))" >> $app_py_path
-            echo "    webview.url = url" >> $app_py_path
-            echo "    widget.content = webview" >> $app_py_path
-            
-            echo "def main():" >> $app_py_path
-            echo "    return {self.app_name}()" >> $app_py_path
-            
-            
-            echo "if __name__ == '__main__':" >> $app_py_path
-            echo "    main().main_loop()" >> $app_py_path
-            
-            echo "Updating app.py code to include webview...done"
-            
-            echo "Building the application..."
-            briefcase package linux
-            briefcase package android
-            echo "Building the application...done"
-            
-            popd || exit
-            
         networks:
-            - proxy-network
+            - website-network
         depends_on:
             - website
-        links:
-            - website:website
         labels:
             - "traefik.enable=false"
         restart: unless-stopped
