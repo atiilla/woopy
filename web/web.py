@@ -1648,7 +1648,7 @@ class Application:
 
         return """
     application:
-        image: woopy-app:latest
+        image: docker.io/yilmazchef/woopy-app:latest
         container_name: application
         command: >
             /bin/bash -c "/app/entrypoint.sh"
