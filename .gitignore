@@ -59,7 +59,6 @@ test/.env
 web/dexec.sh
 
 .py_modules
-*.Dockerfile
 docker-compose.yml
 
 build
