@@ -1650,6 +1650,8 @@ class Application:
     application:
         image: woopy-app:latest
         container_name: application
+        command: >
+            /bin/bash -c "/app/entrypoint.sh"
         networks:
             - website-network
         depends_on:
