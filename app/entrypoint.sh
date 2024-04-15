@@ -1,16 +1,15 @@
 #!/bin/bash
 
-project_name="vincipizzeria"
-app_name="vincipizzeria"
-bundle="xyz.vincipizzeria"
-version="1.0"
-url="https://vincipizzeria.xyz"
-license="MIT license"
-author="Vasif Inci"
-author_email="yilmaz.brievenbus@gmail.com"
-formal_name="vincipizzeria"
-description="vincipizzeria is a project that aims to provide best quality pizza for the masses. It is a project that is managed by Vasif Inci."
-long_description="vincipizzeria is a project that aims to provide best quality pizza for the masses. It is a project that is managed by Vasif Inci. The project is a webshop that allows users to order pizza online and have it delivered to their doorsteps. The project is built using Python and Toga framework."
+# Read all the arguments passed to the script from .env file
+while IFS= read -r line; do
+    export $line
+done < .env
+
+# Check if all the required environment variables are set
+if [[ -z "${project_name}" || -z "${app_name}" || -z "${bundle}" || -z "${version}" || -z "${url}" || -z "${license}" || -z "${author}" || -z "${author_email}" || -z "${formal_name}" || -z "${description}" || -z "${long_description}" ]]; then
+    echo "One or more required environment variables are not set. Aborting."
+    exit 1
+fi
 
 echo "Creating project..."
 
@@ -35,7 +34,7 @@ briefcase new -Q "project_name=${project_name}" \
 
 echo "Project created successfully."
 
-cd ${project_name}
+pushd "${project_name}" || exit
 
 echo "Updating app.py code to include webview..."
 
@@ -97,6 +96,8 @@ app_code=$(echo "${app_code}" | awk -v app_name="${app_name}" '{gsub("{{app_name
 # Replace {{app_url}} with the actual app URL using awk
 app_code=$(echo "${app_code}" | awk -v app_url="${url}" '{gsub("{{app_url}}", app_url); print}')
 
-echo "${app_code}" > ${app_py_path}
+echo "${app_code}" > "${app_py_path}"
+
+popd || exit
 
 echo "app.py updated successfully."
