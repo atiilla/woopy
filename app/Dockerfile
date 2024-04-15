@@ -9,9 +9,11 @@ RUN python3 -m venv venv
 RUN . venv/bin/activate
 
 COPY requirements.txt requirements.txt
+COPY .env .env
 RUN pip3 install -r requirements.txt
 
 COPY entrypoint.sh entrypoint.sh
 RUN chmod +x entrypoint.sh
 
+# podman build --tag woopy-app:latest .
 # podman run -it --rm --name=demoapp woopy-app:latest bash

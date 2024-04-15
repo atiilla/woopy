@@ -11,12 +11,3 @@ typing_extensions
 woocommerce
 opencv-python
 flask_cors
-toga
-pygame
-black
-briefcase
-flake8
-pre-commit
-pytest
-toml
-tox
