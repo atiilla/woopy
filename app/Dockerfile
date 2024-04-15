@@ -15,5 +15,8 @@ RUN pip3 install -r requirements.txt
 COPY entrypoint.sh entrypoint.sh
 RUN chmod +x entrypoint.sh
 
+ENV DISPLAY=:0
+# install x11
+
 # podman build --tag woopy-app:latest .
 # podman run -it --rm --name=demoapp woopy-app:latest bash

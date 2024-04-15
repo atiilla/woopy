@@ -1,9 +1,6 @@
 #!/bin/bash
 
-# Read all the arguments passed to the script from .env file
-while IFS= read -r line; do
-    export $line
-done < .env
+set -o allexport; source .env; set +o allexport
 
 # Check if all the required environment variables are set
 if [[ -z "${project_name}" || -z "${app_name}" || -z "${bundle}" || -z "${version}" || -z "${url}" || -z "${license}" || -z "${author}" || -z "${author_email}" || -z "${formal_name}" || -z "${description}" || -z "${long_description}" ]]; then
