@@ -9,7 +9,6 @@ RUN python3 -m venv venv
 RUN . venv/bin/activate
 
 COPY requirements.txt requirements.txt
-COPY __init__.py __init__.py
 COPY __main__.py __main__.py
 COPY web.py web.py
 COPY .env .env
