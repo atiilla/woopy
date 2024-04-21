@@ -1984,6 +1984,180 @@ For further information, please visit [GitHub](https://github.com/atiilla/woopy)
 """
 
 
+
+class PreequisitesSetup():
+    """
+    This class generates a shell script to install the required software on the host machine.
+    
+    The script should install the following software:
+    - Docker
+    - Docker Compose
+    - Kubernetes
+    - Vagrant
+    
+    The script should be able to run on the following operating systems:
+    - Ubuntu
+    - CentOS
+    - Fedora
+    - Red Hat Enterprise Linux
+    - Debian
+    - openSUSE
+    - SUSE Linux Enterprise Server
+    - Arch Linux
+    - Alpine Linux
+    - FreeBSD
+    - macOS
+    - Rocky Linux
+    - Oracle Linux
+    - AlmaLinux
+    
+    The script must be able to detect the operating system and install the required software accordingly.
+    
+    """
+    
+    def __init__(self):
+        self.prerequisites_setup_content = """
+#!/bin/bash
+
+# Check if the script is running as root
+if [ "$EUID" -ne 0 ]; then
+    echo "Please run this script as root"
+    exit
+fi
+
+# Check the operating system
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    OS=$NAME
+elif type lsb_release > /dev/null 2>&1; then
+    OS=$(lsb_release -si)
+else
+    OS=$(uname -s)
+fi
+
+# Install Docker
+
+if [ "$OS" == "Ubuntu" ] || [ "$OS" == "Debian" ]; then
+    apt-get update
+    apt-get install -y docker.io
+    systemctl enable docker
+    systemctl start docker
+elif [ "$OS" == "CentOS Linux" ] || [ "$OS" == "Fedora" ] || [ "$OS" == "Red Hat Enterprise Linux" ]; then
+    yum install -y docker
+    systemctl enable docker
+    systemctl start docker
+elif [ "$OS" == "openSUSE Leap" ] || [ "$OS" == "SUSE Linux Enterprise Server" ]; then
+    zypper install -y docker
+    systemctl enable docker
+    systemctl start docker
+elif [ "$OS" == "Arch Linux" ]; then
+    pacman -S --noconfirm docker
+    systemctl enable docker
+    systemctl start docker
+elif [ "$OS" == "Alpine Linux" ]; then
+    apk add docker
+    rc-update add docker boot
+    service docker start
+elif [ "$OS" == "FreeBSD" ]; then
+    pkg install -y docker
+    sysrc docker_enable=YES
+    service docker start
+elif [ "$OS" == "macOS" ]; then
+    brew install docker
+    brew services start docker
+elif [ "$OS" == "Rocky Linux" ] || [ "$OS" == "Oracle Linux" ] || [ "$OS" == "AlmaLinux" ]; then
+    dnf install -y docker
+    systemctl enable docker
+    systemctl start docker
+else
+    echo "Unsupported operating system"
+    exit
+fi
+
+# Install Docker Compose
+
+if [ "$OS" == "Ubuntu" ] || [ "$OS" == "Debian" ]; then
+    apt-get install -y docker-compose
+elif [ "$OS" == "CentOS Linux" ] || [ "$OS" == "Fedora" ] || [ "$OS" == "Red Hat Enterprise Linux" ]; then
+    yum install -y docker-compose
+elif [ "$OS" == "openSUSE Leap" ] || [ "$OS" == "SUSE Linux Enterprise Server" ]; then
+    zypper install -y docker-compose
+elif [ "$OS" == "Arch Linux" ]; then
+    pacman -S --noconfirm docker-compose
+elif [ "$OS" == "Alpine Linux" ]; then
+    apk add docker-compose
+elif [ "$OS" == "FreeBSD" ]; then
+    pkg install -y docker-compose
+elif [ "$OS" == "macOS" ]; then
+    brew install docker-compose
+elif [ "$OS" == "Rocky Linux" ] || [ "$OS" == "Oracle Linux" ] || [ "$OS" == "AlmaLinux" ]; then
+    dnf install -y docker-compose
+else
+    echo "Unsupported operating system"
+    exit
+fi
+
+# Install Kubernetes
+
+if [ "$OS" == "Ubuntu" ] || [ "$OS" == "Debian" ]; then
+    apt-get update
+    apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+    apt-get update
+    apt-get install -y kubectl
+elif [ "$OS" == "CentOS Linux" ] || [ "$OS" == "Fedora" ] || [ "$OS" == "Red Hat Enterprise Linux" ]; then
+    yum install -y kubectl
+elif [ "$OS" == "openSUSE Leap" ] || [ "$OS" == "SUSE Linux Enterprise Server" ]; then
+    zypper install -y kubectl
+elif [ "$OS" == "Arch Linux" ]; then
+    pacman -S --noconfirm kubectl
+elif [ "$OS" == "Alpine Linux" ]; then
+    apk add kubectl
+elif [ "$OS" == "FreeBSD" ]; then
+    pkg install -y kubectl
+elif [ "$OS" == "macOS" ]; then
+    brew install kubectl
+elif [ "$OS" == "Rocky Linux" ] || [ "$OS" == "Oracle Linux" ] || [ "$OS" == "AlmaLinux" ]; then
+    dnf install -y kubectl
+else
+    echo "Unsupported operating system"
+    exit
+fi
+
+# Install Vagrant
+
+if [ "$OS" == "Ubuntu" ] || [ "$OS" == "Debian" ]; then
+    apt-get update
+    apt-get install -y vagrant
+elif [ "$OS" == "CentOS Linux" ] || [ "$OS" == "Fedora" ] || [ "$OS" == "Red Hat Enterprise Linux" ]; then
+    yum install -y vagrant
+elif [ "$OS" == "openSUSE Leap" ] || [ "$OS" == "SUSE Linux Enterprise Server" ]; then
+    zypper install -y vagrant
+elif [ "$OS" == "Arch Linux" ]; then
+    pacman -S --noconfirm vagrant
+elif [ "$OS" == "Alpine Linux" ]; then
+    apk add vagrant
+elif [ "$OS" == "FreeBSD" ]; then
+    pkg install -y vagrant
+elif [ "$OS" == "macOS" ]; then
+    brew install vagrant
+elif [ "$OS" == "Rocky Linux" ] || [ "$OS" == "Oracle Linux" ] || [ "$OS" == "AlmaLinux" ]; then
+    dnf install -y vagrant
+else
+    echo "Unsupported operating system"
+    exit
+fi
+
+echo "Prerequisites setup completed"
+
+"""
+
+    def get_script(self):
+        return self.prerequisites_setup_content
+
+
+
 class Project:
     """
     Represents a project with multiple services: website, database, cache, admin, proxy, monitoring, management, vault, code, application, networks, volumes and more.
@@ -2163,7 +2337,7 @@ class Health(Resource):
 api.add_resource(Health, '/health')
 
 
-class DockerCompose(Resource):
+class ProjectApi(Resource):
     """
     Class to generate a docker-compose.yml file
     Args:
@@ -2297,70 +2471,7 @@ class DockerCompose(Resource):
             return str(e)
 
 
-api.add_resource(DockerCompose, '/docker-compose')
-
-
-class ProjectReport(Resource):
-    # require project_name as a parameter
-    @app.route('/project-report/<project_name>')
-    def get(self, project_name: str):
-        """
-        Get the project report
-        ---
-        tags:
-          - Project Report
-        parameters:
-            - name: project_name
-                in: path
-                description: Project name
-                required: true
-                schema:
-                type: string
-        responses:
-            200:
-                description: project report
-                content:
-                application/json:
-                    schema:
-                    type: object
-                    properties:
-                        status:
-                        type: string
-                        example: ok
-                        message:
-                        type: string
-                        example: project report created
-                        version:
-                        type: string
-                        example: 1.0.0
-                        file:
-                        type: string
-                        example: project report
-        """
-
-        # Create a project directory in the user profile if not exists
-        temp_user_dir = os.path.join(os.path.expanduser("~"), ".woopy")
-        project_base_dir = os.path.join(temp_user_dir, project_name)
-
-        project_report_file = os.path.join(project_base_dir, 'project-report.txt')
-        with open(project_report_file, 'r', encoding='utf-8') as f:
-            project_report_data = f.read()
-            logging.info(
-                '################################################################################################')
-            logging.info(f'Getting a report for {project_name} from {project_report_file}')
-            logging.info(
-                '################################################################################################')
-
-        try:
-            return jsonify(
-                status='ok',
-                message='project report generated',
-                version='1.0.0',
-                file=project_report_data
-            )
-        except Exception as e:
-            return str(e)
-
+api.add_resource(ProjectApi, '/')
 
 # Configure Swagger UI
 SWAGGER_URL = '/api'
@@ -2398,7 +2509,7 @@ def swagger():
         }}
     ],
     "paths": {{
-        "/docker-compose": {{
+        "/": {{
             "post": {{
                 "tags": [
                     "Docker Compose"
