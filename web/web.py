@@ -4,10 +4,12 @@ import secrets
 import tempfile
 from datetime import datetime
 
+
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 from flask_restful import Api, Resource
 from flask_swagger_ui import get_swaggerui_blueprint
+from zipfile import ZipFile, ZIP_DEFLATED
 
 logging.basicConfig(level=logging.INFO)
 
@@ -2151,8 +2153,20 @@ class DockerCompose(Resource):
                 logging.info(
                     '################################################################################################')
 
+        project_zip_file = os.path.join(project.project_base_dir, 'project.zip')
+        with ZipFile(project_zip_file, 'w', compression=ZIP_DEFLATED) as zip:
+            zip.write(project_docker_compose_file, 'docker-compose.yml')
+            zip.write(project_report_file, 'project-report.txt')
+            logging.info(
+                '################################################################################################')
+            logging.info(
+                f'Generated project.zip file for {website.website_title} in {project_zip_file}')
+            logging.info(
+                '################################################################################################')
+
+        
         try:
-            return send_file(project_docker_compose_file, mimetype='text/yaml', as_attachment=True)
+            return send_file(project_zip_file, as_attachment=True)
         except Exception as e:
             return str(e)
 
@@ -2258,42 +2272,6 @@ def swagger():
         }}
     ],
     "paths": {{
-        "/health": {{
-            "get": {{
-                "tags": [
-                    "Health"
-                ],
-                "summary": "Get the server health",
-                "description": "Get the server health",
-                "operationId": "getHealth",
-                "responses": {{
-                    "200": {{
-                        "description": "server is running",
-                        "content": {{
-                            "application/json": {{
-                                "schema": {{
-                                    "type": "object",
-                                    "properties": {{
-                                        "status": {{
-                                            "type": "string",
-                                            "example": "ok"
-                                        }},
-                                        "message": {{
-                                            "type": "string",
-                                            "example": "server is running"
-                                        }},
-                                        "version": {{
-                                            "type": "string",
-                                            "example": "1.0.0"
-                                        }}
-                                    }}
-                                }}
-                            }}
-                        }}
-                    }}
-                }}
-            }}
-        }},
         "/docker-compose": {{
             "post": {{
                 "tags": [
@@ -2343,59 +2321,7 @@ def swagger():
                     }}
                 }}
             }}
-        }},
-        "/project-report": {{
-            "get": {{
-                "tags": [
-                    "Project Report"
-                ],
-                "summary": "Get the project report",
-                "description": "Get the project report",
-                "operationId": "getProjectReport",
-                "parameters": [
-                    {{
-                        "name": "website_title",
-                        "in": "path",
-                        "description": "Website title",
-                        "required": true,
-                        "schema": {{
-                            "type": "string"
-                        }}
-                    }}
-                ],
-                "responses": {{
-                    "200": {{
-                        "description": "project report",
-                        "content": {{
-                            "application/json": {{
-                                "schema": {{
-                                    "type": "object",
-                                    "properties": {{
-                                        "status": {{
-                                            "type": "string",
-                                            "example": "ok"
-                                        }},
-                                        "message": {{
-                                            "type": "string",
-                                            "example": "project report created"
-                                        }},
-                                        "version": {{
-                                            "type": "string",
-                                            "example": "1.0.0"
-                                        }},
-                                        "file": {{
-                                            "type": "string",
-                                            "example": "project report"
-                                        }}
-                                    }}
-                                }}
-                            }}
-                        }}
-                    }}
-                }}
-            }}
         }}
-    }}
 }}
 
 """
