@@ -2413,6 +2413,8 @@ class ProjectApi(Resource):
         )
         
         readme = ReadMe(project_name=project.project_name)
+        prerequisites_setup = PreequisitesSetup()
+        
 
         # Create docker-compose.yaml file in current working directory / website_title / docker-compose.yml
         project_docker_compose_file = os.path.join(project.project_base_dir, 'docker-compose.yml')
@@ -2451,12 +2453,26 @@ class ProjectApi(Resource):
                     f'Generated README.md file for {website.website_title} in {project_readme_file}')
                 logging.info(
                     '################################################################################################')
+                
+                
+            # generate prerequisites-setup.sh file for the project
+            prerequisites_setup_file = os.path.join(project.project_base_dir, 'prerequisites-setup.sh')
+            with open(prerequisites_setup_file, 'w', encoding='utf-8') as f:
+                f.write(prerequisites_setup.get_script())
+                logging.info(
+                    '################################################################################################')
+                logging.info(
+                    f'Generated prerequisites-setup.sh file for {website.website_title} in {prerequisites_setup_file}')
+                logging.info(
+                    '################################################################################################')
+                
 
         project_zip_file = os.path.join(project.project_base_dir, 'project.zip')
         with ZipFile(project_zip_file, 'w', compression=ZIP_DEFLATED) as zip:
             zip.write(project_docker_compose_file, 'docker-compose.yml')
             zip.write(project_report_file, 'project-report.txt')
             zip.write(project_readme_file, 'README.md')
+            zip.write(prerequisites_setup_file, 'prerequisites-setup.sh')
             logging.info(
                 '################################################################################################')
             logging.info(
@@ -2492,7 +2508,7 @@ def swagger():
 {{
     "openapi": "3.0.0",
     "info": {{
-        "title": "Docker Compose Generator",
+        "title": "WooPy Project Generator",
         "description": "Generate a docker-compose.yml file",
         "version": "1.0.0"
     }},
@@ -2504,8 +2520,8 @@ def swagger():
     ],
     "tags": [
         {{
-            "name": "Docker Compose",
-            "description": "Generate a docker-compose.yml file"
+            "name": "WooPy",
+            "description": "Generate a docker-compose.yml, report, and README.md file as well as a script to install the required software on the host machine"
         }}
     ],
     "paths": {{
@@ -2514,9 +2530,9 @@ def swagger():
                 "tags": [
                     "Docker Compose"
                 ],
-                "summary": "Get the docker-compose.yml file",
-                "description": "Get the docker-compose.yml file",
-                "operationId": "postDockerCompose",
+                "summary": "Get the project as a zip file",
+                "description": "Get the project as a zip file",
+                "operationId": "get_project",
                 "requestBody": {{
                     "description": "Environment variables",
                     "content": {{
@@ -2541,7 +2557,7 @@ def swagger():
                                         }},
                                         "message": {{
                                             "type": "string",
-                                            "example": "docker-compose.yml file created"
+                                            "example": "project.zip file created"
                                         }},
                                         "version": {{
                                             "type": "string",
@@ -2549,7 +2565,7 @@ def swagger():
                                         }},
                                         "file": {{
                                             "type": "string",
-                                            "example": "docker-compose.yml file"
+                                            "example": "project.zip file"
                                         }}
                                     }}
                                 }}
