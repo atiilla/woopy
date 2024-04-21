@@ -21,8 +21,8 @@ CMD ["python3", "-m" , "flask", "run", "--host=0.0.0.0"]
 
 EXPOSE 5000
 
-# podman build --tag docker.io/yilmazchef/woopy-web:latest .
-# podman push docker.io/yilmazchef/woopy-web:latest
-# podman pull docker.io/yilmazchef/woopy-web
-# podman run -p 5000:5000 --name=coolweb -d docker.io/yilmazchef/woopy-web:latest
+# docker build --tag docker.io/yilmazchef/woopy-web:latest .
+# docker push docker.io/yilmazchef/woopy-web:latest
+# docker pull docker.io/yilmazchef/woopy-web
+# docker run -p 5000:5000 --name=coolweb -d docker.io/yilmazchef/woopy-web:latest
 
