@@ -1,9 +1,4 @@
-docker
-typer
-kivy
-kivymd
 python-dotenv
 requests
 typing_extensions
-woocommerce
-opencv-python
+typer

@@ -4,3 +4,4 @@ flask-restful
 python-dotenv
 requests
 flask_cors
+Faker

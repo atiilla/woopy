@@ -1,37 +1,27 @@
 import os
+import logging
 import requests
 import typer
 from typing_extensions import Annotated
+from io import BytesIO
 
-from shared.utils import load_env
-from web.web import api as server
 
+logging.basicConfig(level=logging.INFO)
 app = typer.Typer()
 
-
-# Function to start the WooPyAPI server
-@app.command(add_help_option=True, help="Start the WooPyAPI server")
-def start_api():
-    server.run(debug=True)
-
-
-# Function to stop the WooPyAPI server
-@app.command(add_help_option=True, help="Stop the WooPyAPI server")
-def stop_api():
-    # Implement the logic to stop the server
-    server.stop()
-
-
-# Function to restart the WooPyAPI server
-@app.command(add_help_option=True, help="Restart the WooPyAPI server")
-def restart_api():
-    # Implement the logic to restart the server
-    server.restart()
+# Load .env into a string stream
+def load_env(env_path: str = os.path.join(os.getcwd(), '.env')) -> BytesIO:
+    stream = BytesIO()
+    with open(env_path, 'r', encoding='utf-8') as file:
+        stream.write(file.read().encode('utf-8'))
+    stream.seek(0)
+    return stream
 
 
 # Function to generate a docker-compose.yml file
 @app.command(add_help_option=True, help="Generate a docker-compose.yml file")
 def gen_dc(company: Annotated[str, "The name of the company"],
+           api_url: Annotated[str, "The URL of the WooPyAPI server"],
            force: Annotated[bool, "Overwrite the docker-compose.yml file if it already exists"] = False):
 
     company_path = os.path.join(os.getcwd(), company)
@@ -55,12 +45,11 @@ def gen_dc(company: Annotated[str, "The name of the company"],
         return
 
     response = requests.post(
-        'http://localhost:5000/docker-compose',
+        f"http://{api_url}:5000/api/docker-compose",
         headers={'Content-Type': 'text/plain',
                  'Accept': 'text/plain',
                  'User-Agent': 'WooPyAPI',
-                 'Connection': 'keep-alive',
-                 'Accept-Language': 'en-US,en;q=0.9,es;q=0.8,fr;q=0.7;be=q=0.6,pt;q=0.5,de;q=0.4,ja;q=0.3,ru;q=0.2,ar;q=0.1'},
+                 'Connection': 'keep-alive'},
         data=load_env(env_path).read().decode('utf-8'))
 
     if response.status_code == 200 and response.text:
