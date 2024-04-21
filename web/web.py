@@ -128,13 +128,13 @@ def get_port(service: str) -> int:
         return 80
     
 
-def generate_email(website_hostname: str, service_name: str) -> str:
+def generate_email(website_host: str, service_name: str) -> str:
     """
     Generate a random email
     """
-    # Generate a random token and append it to the website hostname
+    # Generate a random token and append it to the website host
     token = secrets.token_urlsafe(8)
-    return f"{service_name}-{token}@{website_hostname}"
+    return f"{service_name}-{token}@{website_host}"
 
 
 class Database:
@@ -402,7 +402,7 @@ class Mail:
     """
 
     def __init__(self, site_title: str, site_url: str):
-        self.mail_hostname = generate_service(site_title)
+        self.mail_host = generate_service(site_title)
         self.mail_base_url = f"{site_url}"
         self.mail_username = generate_username()
         self.mail_password = generate_password()
@@ -419,9 +419,9 @@ class Mail:
         image: mailhog/mailhog
         container_name: mail
         environment:
-            - MH_UI_BIND_ADDR={self.mail_hostname}:8025
-            - MH_SMTP_BIND_ADDR={self.mail_hostname}:1025
-            - MH_API_BIND_ADDR={self.mail_hostname}:8025
+            - MH_UI_BIND_ADDR={self.mail_host}:8025
+            - MH_SMTP_BIND_ADDR={self.mail_host}:1025
+            - MH_API_BIND_ADDR={self.mail_host}:8025
             - MH_UI_WEB_PATH=/
         ports:
             - "8025:8025"
@@ -546,15 +546,15 @@ class Website:
         self.database_user = f"{database_props.database_user}"
         self.database_password = f"{database_props.database_password}"
         self.database_table_prefix = f"{database_props.database_table_prefix}"
-        self.website_hostname = generate_service(site_title)
+        self.website_host = generate_service(site_title)
         self.website_title = f"{site_title}"
         self.website_url = f"{site_url}"
         self.website_description = f"Add description here for {site_title}: {datetime.now()}"
         self.website_admin_username = generate_username()
         # generate a hashed password with SHA-256 and base64 encoding
         self.website_admin_password = generate_password()
-        self.website_admin_email = generate_email(self.website_hostname, "website")
-        self.mail_smtp_host = f"{mail_props.mail_hostname}"
+        self.website_admin_email = generate_email(self.website_host, "website")
+        self.mail_smtp_host = f"{mail_props.mail_host}"
         self.mail_smtp_port = f"{mail_props.mail_port}"
         self.mail_smtp_user = f"{mail_props.mail_username}"
         self.mail_smtp_password = f"{mail_props.mail_password}"
@@ -604,7 +604,7 @@ class Website:
             - database
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.wordpress.rule=Host(`{self.website_hostname}`)"
+            - "traefik.http.routers.wordpress.rule=Host(`{self.website_host}`)"
             - "traefik.http.routers.wordpress.service=wordpress"
             - "traefik.http.routers.wordpress.entrypoints=websecure"
             - "traefik.http.services.wordpress.loadbalancer.server.port=8080"
@@ -884,10 +884,10 @@ class Proxy:
         self.proxy_username = generate_username()
         self.proxy_password = generate_password()
         self.proxy_title = generate_service(site_title)
-        self.proxy_hostname = generate_service()
+        self.proxy_host = self.proxy_title
         self.proxy_port = get_port("Traefik")
         self.proxy_username = generate_username()
-        self.proxy_email = generate_email(self.proxy_hostname, "proxy")
+        self.proxy_email = generate_email(self.proxy_host, "proxy")
         self.proxy_password = generate_password()
 
     def to_docker_compose(self):
@@ -897,7 +897,7 @@ class Proxy:
         return f"""
     proxy:
         image: traefik:2.9
-        container_name: {self.proxy_hostname}
+        container_name: {self.proxy_host}
         command:
             - "--log.level=WARN"
             - "--accesslog=true"
@@ -930,7 +930,7 @@ class Proxy:
             - "443:443"
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.dashboard.rule=Host(`traefik.{self.proxy_hostname}`)"
+            - "traefik.http.routers.dashboard.rule=Host(`traefik.{self.proxy_host}`)"
             - "traefik.http.routers.dashboard.service=api@internal"
             - "traefik.http.routers.dashboard.entrypoints=websecure"
             - "traefik.http.services.dashboard.loadbalancer.server.port=8080"
@@ -1257,7 +1257,7 @@ class Management:
     """
 
     def __init__(self, site_title: str):
-        self.management_hostname = generate_service(site_title)
+        self.management_host = generate_service(site_title)
         self.management_port = get_port("Portainer")
         self.management_username = generate_username()
         self.management_email = generate_email(self.management_host, "management")
@@ -1286,7 +1286,7 @@ class Management:
             - proxy
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.{self.management_hostname}`)"
+            - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.{self.management_host}`)"
             - "traefik.http.routers.phpmyadmin.service=phpmyadmin"
             - "traefik.http.routers.phpmyadmin.entrypoints=websecure"
             - "traefik.http.services.phpmyadmin.loadbalancer.server.port=80"
@@ -1468,10 +1468,10 @@ class Vault:
     """
 
     def __init__(self, site_title: str):
-        self.vault_hostname = generate_service(site_title)
+        self.vault_host = generate_service(site_title)
         self.vault_port = get_port("Vault")
         self.vault_username = generate_username()
-        self.vault_email = generate_email(self.vault_hostname, "vault")
+        self.vault_email = generate_email(self.vault_host, "vault")
         self.vault_password = generate_password()
 
     def to_docker_compose(self):
@@ -1481,7 +1481,7 @@ class Vault:
         return f"""
     vault:
         image: alpine:latest
-        container_name: {self.vault_hostname}
+        container_name: {self.vault_host}
         command: >
             /bin/sh -c "echo Vault username (encrypted):" && echo -n '{self.vault_username}' | sha256sum &&
             /bin/sh -c "echo Vault password (encrypted):" && echo -n '{self.vault_password}' | sha256sum
@@ -1714,19 +1714,19 @@ class Application:
             website (Website): The website object associated with the application.
             version (str, optional): The version of the application (default is "1.0").
         """
-        self.app_hostname= generate_service(site_title)
-        self.project_name = self.app_hostname
-        self.app_name = self.app_hostname
+        self.app_host= generate_service(site_title)
+        self.project_name = self.app_host
+        self.app_name = self.app_host
         # reverse the host name. for example if the host url is "h2oheating.xyz" then the bundle will be "xyz.h2oheating"
         self.bundle = ".".join(site_url.split(".")[::-1])
         self.version = version
         self.url = site_url
         self.license = "MIT license"
         self.author = generate_username()
-        self.author_email = generate_email(self.app_hostname, "app")
-        self.formal_name = self.app_hostname
-        self.description = f"{self.app_name} is a native application for {self.app_hostname}."
-        self.long_description = f"{self.app_name} is designed to provide a user-friendly interface for {self.app_hostname}. It can be installed on Linux, macOS, Windows, Android, iOS. It is written in Python using Toga and Briefcase frameworks."
+        self.author_email = generate_email(self.app_host, "app")
+        self.formal_name = self.app_host
+        self.description = f"{self.app_name} is a native application for {self.app_host}."
+        self.long_description = f"{self.app_name} is designed to provide a user-friendly interface for {self.app_host}. It can be installed on Linux, macOS, Windows, Android, iOS. It is written in Python using Toga and Briefcase frameworks."
 
     def to_docker_compose(self):
         """
@@ -1739,7 +1739,7 @@ class Application:
         return f"""
     application:
         image: docker.io/yilmazchef/woopy-app:latest
-        container_name: {self.app_hostname}
+        container_name: {self.app_host}
         command: >
             /bin/bash -c "/app/entrypoint.sh"
         networks:
@@ -1951,7 +1951,7 @@ Database Port: {self.database.database_port}
 Database Username: {self.database.database_user}
 Database Password: {self.database.database_password}
 -------------------------------------------------------------
-Website Hostname: {self.website.website_hostname}
+Website Hostname: {self.website.website_host}
 Website Email: {self.website.website_admin_email}
 Website Username: {self.website.website_admin_username}
 Website Password: {self.website.website_admin_password}
@@ -2098,13 +2098,13 @@ class DockerCompose(Resource):
         database = Database(site_title=site_title)
         email = Mail(site_title=site_title, site_url=site_url)
         cache = Cache(site_title=site_title)
-        website = Website(site_title=site_title, site_url=site_url, mail_props=email, cache_props=cache)
+        website = Website(site_title=site_title, site_url=site_url, database_props=database, mail_props=email, cache_props=cache)
         admin = Admin(site_title=site_title, database_props=database)
         proxy = Proxy(site_title=site_title)
         monitoring = Monitoring(site_title=site_title)
         management = Management(site_title=site_title)
         vault = Vault(site_title=site_title)
-        code = Code(site_title=site_title, site_host=website.website_hostname)
+        code = Code(site_title=site_title, site_host=website.website_host)
         application = Application(site_title=site_title, site_url=site_url)
 
         networks = Networks()
