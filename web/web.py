@@ -1872,6 +1872,117 @@ class Application:
         end
         """
 
+class ReadMe():
+    """
+    ReadMe class: This class is to provide ReadMe.md document for the project.
+    It must explain all the services and how to use them.
+    
+    It must provide documentation to 3 different level of users:
+    - Beginner
+    - Intermediate
+    - Advanced
+    """
+    
+    def __init__(self, project_name: str):
+        self.project_name = project_name
+        self.readme_content = f"""
+# {self.project_name}
+
+## Introduction
+
+This project is a collection of services that can be used to create a website, database, cache, admin, proxy, monitoring, management, vault, code, and application.
+
+## Services
+
+### Website
+
+This services is based on WordPress and WooCommerce. It is used to create a website for the project.
+
+#### WordPress
+
+WordPress is a free and open-source content management system written in PHP and paired with a MySQL or MariaDB database. Features include a plugin architecture and a template system, referred to within WordPress as Themes. For further information, please visit [WordPress](https://wordpress.org/).
+
+#### WooCommerce
+
+WooCommerce is an open-source e-commerce plugin for WordPress. It is designed for small to large-sized online merchants using WordPress. For further information, please visit [WooCommerce](https://woocommerce.com/).
+
+
+### Database
+
+This service is based on MySQL. It is used to store the data for the website. For further information, please visit [MySQL](https://www.mysql.com/).
+
+### Cache
+
+This service is based on Redis. It is used to cache the data for the website. For further information, please visit [Redis](https://redis.io/).
+
+### Admin
+
+This service is based on phpMyAdmin. It is used to manage the database for the website. For further information, please visit [phpMyAdmin](
+    
+### Proxy
+
+This service is based on Traefik. It is used to route the traffic for the website. For further information, please visit [Traefik](https://traefik.io/).
+
+### Monitoring
+
+This service is based on Cadvisor. It is used to monitor the containers for the website. For further information, please visit [Cadvisor](
+    
+### Management
+
+This service is based on Portainer. It is used to manage the containers for the website. For further information, please visit [Portainer](https://www.portainer.io/).
+
+### Vault
+
+This service is based on Vault. It is used to store the secrets for the website. For further information, please visit [Vault](https://www.vaultproject.io/).
+
+### Code
+
+This service is based on Code Server. It is used to write the code for the website. For further information, please visit [Code Server](https://coder.com/).
+
+### Application
+
+This service is based on Toga and Briefcase. It is used to create a native application for the website. For further information, please visit [Toga](https://beeware.org/project/projects/libraries/toga/) and [Briefcase](https://beeware.org/project/projects/tools/briefcase/).
+
+## How to Use
+
+### Beginner
+
+To use this project, you need to have Docker and Docker Compose installed on your machine. Then, you can run the following command:
+    
+    ```bash
+    docker-compose up -d
+    ```
+    
+This will start all the services for the project.
+
+### Intermediate
+
+To use this project, you need to have Kubernetes installed on your machine. Then, you can run the following command:
+    
+    ```bash
+    kubectl apply -f kubernetes.yml
+    ```
+        
+This will start all the services for the project.
+
+### Advanced
+
+To use this project, you need to have Vagrant installed on your machine. Then, you can run the following command:
+
+    ```bash
+    vagrant up
+    ```
+        
+This will start all the services for the project.
+
+## Conclusion
+
+This project is a collection of services that can be used to create a website, database, cache, admin, proxy, monitoring, management, vault, code, and application. It is designed to be easy to use for beginners, intermediate users, and advanced users.
+
+For further information, please visit [GitHub](https://github.com/atiilla/woopy).
+
+"""
+
 
 class Project:
     """
@@ -2126,6 +2237,8 @@ class DockerCompose(Resource):
             networks=networks,
             volumes=volumes
         )
+        
+        readme = ReadMe(project_name=project.project_name)
 
         # Create docker-compose.yaml file in current working directory / website_title / docker-compose.yml
         project_docker_compose_file = os.path.join(project.project_base_dir, 'docker-compose.yml')
@@ -2152,11 +2265,24 @@ class DockerCompose(Resource):
                     f'Generated project-report.txt file for {website.website_title} in {project_report_file}')
                 logging.info(
                     '################################################################################################')
+                
+            
+            # generate README.md file
+            project_readme_file = os.path.join(project.project_base_dir, 'README.md')
+            with open(project_readme_file, 'w', encoding='utf-8') as f:
+                f.write(readme.readme_content)
+                logging.info(
+                    '################################################################################################')
+                logging.info(
+                    f'Generated README.md file for {website.website_title} in {project_readme_file}')
+                logging.info(
+                    '################################################################################################')
 
         project_zip_file = os.path.join(project.project_base_dir, 'project.zip')
         with ZipFile(project_zip_file, 'w', compression=ZIP_DEFLATED) as zip:
             zip.write(project_docker_compose_file, 'docker-compose.yml')
             zip.write(project_report_file, 'project-report.txt')
+            zip.write(project_readme_file, 'README.md')
             logging.info(
                 '################################################################################################')
             logging.info(
