@@ -139,6 +139,34 @@ def generate_email(website_host: str, service_name: str) -> str:
     return f"{service_name}-{token}@{website_host}"
 
 
+def is_local_setup() -> bool:
+    """
+    Check if the setup is local
+    """
+    # Check if the hostname is localhost
+    import socket
+    return socket.gethostname() == "localhost"
+
+
+def get_logging() -> str:
+    """
+    Get the logging configuration
+    """
+    if is_local_setup():
+        return """
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "5"
+        """
+    else:
+        return """
+            driver: "syslog"
+            options:
+                tag: "{{.Name}}"
+        """
+
+
 class Database:
     """
     Database class: This class is used to create a database for the website
@@ -182,93 +210,9 @@ class Database:
             timeout: 5s
             retries: 5
         logging:
-            driver: "json-file"
-            options:
-                max-size: "10m"
-                max-file: "3"
+            {get_logging()}
         """
 
-    def to_kubernetes(self):
-        """
-        This function returns the kubernetes data for the database
-        """
-        return f"""
-        apiVersion: v1
-        kind: Service
-        metadata:
-          name: database
-          labels:
-            app: database
-        spec:
-            ports:
-            - port: 3306
-                targetPort: 3306
-            selector:
-                app: database
-            type: ClusterIP
-        ---
-        apiVersion: apps/v1
-        kind: Deployment
-        metadata:
-            name: database
-            labels:
-                app: database
-        spec:
-            selector:
-                matchLabels:
-                    app: database
-            template:
-                metadata:
-                    labels:
-                        app: database
-                spec:
-                    containers:
-                    - name: database
-                        image: mariadb:11.1
-                        ports:
-                        - containerPort: 3306
-                        env:
-                        - name: MARIADB_DATABASE
-                            value: {self.database_name}
-                        - name: MARIADB_USER
-                            value: {self.database_user}
-                        - name: MARIADB_PASSWORD
-                            value: {self.database_password}
-                        - name: MARIADB_ROOT_PASSWORD
-                            value: {self.database_root_password}
-                        - name: MARIADB_HOST
-                            value: {self.database_host}
-                        - name: MARIADB_PORT_NUMBER
-                            value: {self.database_port}
-                        - name: MARIADB_CHARACTER_SET
-                            value: {self.database_character_set}
-        """
-
-    def to_vagrant_vm(self):
-        """
-        This function returns the vagrant data for the database
-        """
-        return f"""
-        config.vm.define "database" do |database|
-            database.vm.box = "ubuntu/focal64"
-            database.vm.hostname = "database"
-            database.vm.network "private_network", ip: "
-            database.vm.provider "virtualbox" do |vb|
-                vb.memory = "1024"
-                vb.cpus = "1"
-            end
-            database.vm.provision "shell", inline: <<-SHELL
-                sudo apt-get update
-                sudo apt-get install -y mariadb-server
-                sudo sed -i 's/bind-address/#bind-address/g' /etc/mysql/mariadb.conf.d/50-server.cnf
-                sudo systemctl restart mariadb
-                sudo mysql -e "CREATE DATABASE {self.database_name};"
-                sudo mysql -e "CREATE USER '{self.database_user}'@'%' IDENTIFIED BY '{self.database_password}';"
-                sudo mysql -e "GRANT ALL PRIVILEGES ON {self.database_name}.* TO '{self.database_user}'@'%';"
-                sudo mysql -e "FLUSH PRIVILEGES;"
-            SHELL
-        end
-        """
 
 
 class Cache:
@@ -310,91 +254,7 @@ class Cache:
             - "traefik.enable=false"
         restart: unless-stopped
         logging:
-            driver: "json-file"
-            options:
-                max-size: "10m"
-                max-file: "3"
-        """
-
-    def to_kubernetes(self):
-        """
-        This function returns the kubernetes data for the cache
-        """
-        return f"""
-        apiVersion: v1
-        kind: Service
-        metadata:
-          name: cache
-          labels:
-            app: cache
-        spec:
-            ports:
-            - port: 6379
-                targetPort: 6379
-            selector:
-                app: cache
-            type: ClusterIP
-        ---
-        apiVersion: apps/v1
-        kind: Deployment
-        metadata:
-            name: cache
-            labels:
-                app: cache
-        spec:
-            selector:
-                matchLabels:
-                    app: cache
-            template:
-                metadata:
-                    labels:
-                        app: cache
-                spec:
-                    containers:
-                    - name: cache
-                        image: redis:latest
-                        ports:
-                        - containerPort: 6379
-                        env:
-                        - name: REDIS_HOST
-                            value: {self.cache_host}
-                        - name: REDIS_PORT_NUMBER
-                            value: {self.cache_port}
-                        - name: REDIS_USERNAME
-                            value: {self.cache_username}
-                        - name: REDIS_PASSWORD
-                            value: {self.cache_password}
-                        - name: REDIS_DATABASE_NUMBER
-                            value: "0"
-                        - name: REDIS_DISABLE_COMMANDS
-                            value: "FLUSHDB,FLUSHALL"
-                        - name: REDIS_APPENDONLY
-                            value: "yes"
-                        - name: REDIS_MAXMEMORY
-                            value: "256mb"
-                        - name: REDIS_MAXMEMORY_POLICY
-                            value: "allkeys-lru"
-        """
-
-    def to_vagrant_vm(self):
-        """
-        This function returns the vagrant data for the cache
-        """
-        return """
-        config.vm.define "cache" do |cache|
-            cache.vm.box = "ubuntu/focal64"
-            cache.vm.hostname = "cache"
-            cache.vm.network "private_network", ip: "
-            cache.vm.provider "virtualbox" do |vb|
-                vb.memory = "1024"
-                vb.cpus = "1"
-            end
-            cache.vm.provision "shell", inline: <<-SHELL
-                sudo apt-get update
-                sudo apt-get install -y redis-server
-                sudo sed -i 's/bind
-            SHELL
-        end
+            {get_logging()}
         """
 
 
@@ -438,103 +298,10 @@ class Mail:
             - "traefik.enable=false"
         restart: unless-stopped
         logging:
-            driver: "json-file"
-            options:
-                max-size: "10m"
-                max-file: "3"
+            {get_logging()}
         """
 
-    def to_kubernetes(self):
-        """
-        This function returns the kubernetes data for the mail server
-        """
-        return f"""
-        apiVersion: v1
-        kind: Service
-        metadata:
-          name: mail
-          labels:
-            app: mail
-        spec:
-            ports:
-            - port: 8025
-                targetPort: 8025
-            - port: {self.mail_port}
-                targetPort: 1025
-            selector:
-                app: mail
-            type: ClusterIP
-        ---
-        apiVersion: apps/v1
-        kind: Deployment
-        metadata:
-            name: mail
-            labels:
-                app: mail
-        spec:
-            selector:
-                matchLabels:
-                    app: mail
-            template:
-                metadata:
-                    labels:
-                        app: mail
-                spec:
-                    containers:
-                    - name: mail
-                        image: mailhog/mailhog
-                        ports:
-                        - containerPort: 8025
-                        - containerPort: 1025
-        """
-
-    def to_vagrant_vm(self):
-        """
-        This function returns the vagrant data for the mail server
-        """
-        return """
-        config.vm.define "mail" do |mail|
-            mail.vm.box = "ubuntu/focal64"
-            mail.vm.hostname = "mail"
-            mail.vm.network "private_network", ip: "
-            mail.vm.provider "virtualbox" do |vb|
-                vb.memory = "1024"
-                vb.cpus = "1"
-            end
-            mail.vm.provision "shell", inline: <<-SHELL
-                sudo apt-get update
-                sudo apt-get install -y apache2-utils
-                sudo apt-get install -y apt-transport-https
-                sudo apt-get install -y ca-certificates
-                sudo apt-get install -y curl
-                sudo apt-get install -y gnupg
-                sudo apt-get install -y lsb-release
-                sudo apt-get install -y wget
-                sudo apt-get install -y redis-server
-                sudo apt-get install -y mariadb-client
-                sudo apt-get install -y unzip
-                sudo apt-get install -y docker.io
-                sudo apt-get install -y docker-compose
-                sudo apt-get install -y apache2
-                sudo apt-get install -y php
-                sudo apt-get install -y php-mysql
-                sudo apt-get install -y php-curl
-                sudo apt-get install -y php-gd
-                sudo apt-get install -y php-intl
-                sudo apt-get install -y php-mbstring
-                sudo apt-get install -y php-soap
-                sudo apt-get install -y php-xml
-                sudo apt-get install -y php-xmlrpc
-                sudo apt-get install -y php-zip
-                sudo systemctl enable docker
-                sudo systemctl start docker
-                sudo systemctl enable apache2
-                sudo systemctl start apache2
-                sudo wget
-            SHELL
-        end
-        """
-
+    
 
 class Website:
     """
@@ -618,135 +385,7 @@ class Website:
             - "traefik.docker.network=proxy-network"
         restart: unless-stopped
         logging:
-            driver: "json-file"
-            options:
-                max-size: "10m"
-                max-file: "3"
-        """
-
-    def to_kubernetes(self):
-        """
-        This function returns the kubernetes data for the website
-        """
-        return f"""
-        apiVersion: v1
-        kind: Service
-        metadata:
-          name: website
-          labels:
-            app: website
-        spec:
-            ports:
-            - port: 8080
-                targetPort: 8080
-            selector:
-                app: website
-            type: ClusterIP
-        ---
-        apiVersion: apps/v1
-        kind: Deployment
-        metadata:
-            name: website
-            labels:
-                app: website
-        spec:
-            selector:
-                matchLabels:
-                    app: website
-            template:
-                metadata:
-                    labels:
-                        app: website
-                spec:
-                    containers:
-                    - name: website
-                        image: bitnami/wordpress:latest
-                        ports:
-                        - containerPort: 8080
-                        env:
-                        - name: WORDPRESS_DATABASE_HOST
-                            value: {self.database_host}
-                        - name: WORDPRESS_DATABASE_PORT_NUMBER
-                            value: {self.database_port}
-                        - name: WORDPRESS_DATABASE_NAME
-                            value: {self.database_name}
-                        - name: WORDPRESS_DATABASE_USER
-                            value: {self.database_user}
-                        - name: WORDPRESS_DATABASE_PASSWORD
-                            value: {self.database_password}
-                        - name: WORDPRESS_TABLE_PREFIX
-                            value: {self.database_table_prefix}
-                        - name: WORDPRESS_BLOG_NAME
-                            value: {self.website_title}
-                        - name: WORDPRESS_USERNAME
-                            value: {self.website_admin_username}
-                        - name: WORDPRESS_PASSWORD
-                            value: {self.website_admin_password}
-                        - name: WORDPRESS_EMAIL
-                            value: {self.website_admin_email}
-                        - name: WORDPRESS_SMTP_HOST
-                            value: {self.mail_smtp_host}
-                        - name: WORDPRESS_SMTP_PORT
-                            value: {self.mail_smtp_port}
-                        - name: WORDPRESS_SMTP_USER
-                            value: {self.mail_smtp_user}
-                        - name: WORDPRESS_SMTP_PASSWORD
-                            value: {self.mail_smtp_password}
-                        - name: WORDPRESS_SMTP_PROTOCOL
-                            value: {self.mail_smtp_protocol}
-                        - name: WORDPRESS_CACHE_ENABLED
-                            value: "true"
-                        - name: WORDPRESS_CACHE_DURATION
-                            value: "1440"
-                        - name: WORDPRESS_CACHE_TYPE
-                            value: "redis"
-                        - name: WORDPRESS_REDIS_HOST
-                            value: {self.cache_host}
-                        - name: WORDPRESS_REDIS_PORT
-                            value: {self.cache_port}
-                        - name: WORDPRESS_REDIS_DATABASE
-                            value: "0"
-                        - name: WORDPRESS_REDIS_PASSWORD
-                            value: {self.cache_password}
-        """
-
-    def to_vagrant_vm(self):
-        """
-        This function returns the vagrant data for the website
-        """
-        return """
-        config.vm.define "website" do |website|
-            website.vm.box = "ubuntu/focal64"
-            website.vm.hostname = "website"
-            website.vm.network "private_network", ip: "
-            website.vm.provider "virtualbox" do |vb|
-                vb.memory = "1024"
-                vb.cpus = "1"
-            end
-            website.vm.provision "shell", inline: <<-SHELL
-                sudo apt-get update
-                sudo apt-get install -y apache2
-                sudo apt-get install -y php
-                sudo apt-get install -y php-mysql
-                sudo apt-get install -y php-curl
-                sudo apt-get install -y php-gd
-                sudo apt-get install -y php-intl
-                sudo apt-get install -y php-mbstring
-                sudo apt-get install -y php-soap
-                sudo apt-get install -y php-xml
-                sudo apt-get install -y php-xmlrpc
-                sudo apt-get install -y php-zip
-                sudo apt-get install -y mariadb-client
-                sudo apt-get install -y unzip
-                sudo apt-get install -y wget
-                sudo wget https://wordpress.org/latest.zip
-                sudo unzip latest.zip -d /var/www/html/
-                sudo chown -R www-data:www-data /var/www/html/wordpress
-                sudo chmod -R 755 /var/www/html/wordpress
-                sudo sed -i 's/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/g' /etc/php/7.4/apache2/php.ini
-                sudo systemctl restart apache2
-            SHELL
-        end
+            {get_logging()}
         """
 
 
@@ -797,85 +436,10 @@ class Admin:
             - "traefik.docker.network=proxy-network"
         restart: unless-stopped
         logging:
-            driver: "json-file"
-            options:
-                max-size: "10m"
-                max-file: "3"
+            {get_logging()}
         """
 
-    def to_kubernetes(self):
-        """
-        This function returns the kubernetes data for the admin panel
-        """
-        return f"""
-        apiVersion: v1
-        kind: Service
-        metadata:
-          name: admin
-          labels:
-            app: admin
-        spec:
-            ports:
-            - port: 80
-                targetPort: 80
-            selector:
-                app: admin
-            type: ClusterIP
-        ---
-        apiVersion: apps/v1
-        kind: Deployment
-        metadata:
-            name: admin
-            labels:
-                app: admin
-        spec:
-            selector:
-                matchLabels:
-                    app: admin
-            template:
-                metadata:
-                    labels:
-                        app: admin
-                spec:
-                    containers:
-                    - name: admin
-                        image: phpmyadmin:latest
-                        ports:
-                        - containerPort: 80
-                        env:
-                        - name: PMA_HOST
-                            value: {self.database_host}
-                        - name: PMA_PORT
-                            value: {self.database_port}
-                        - name: PMA_USER
-                            value: {self.database_user}
-                        - name: PMA_PASSWORD
-                            value: {self.database_password}
-                        - name: PMA_ARBITRARY
-                            value: 1
-        """
-
-    def to_vagrant_vm(self):
-        """
-        This function returns the vagrant data for the admin panel
-        """
-        return """
-        config.vm.define "admin" do |admin|
-            admin.vm.box = "ubuntu/focal64"
-            admin.vm.hostname = "admin"
-            admin.vm.network "private_network", ip: "
-            admin.vm.provider "virtualbox" do |vb|
-                vb.memory = "1024"
-                vb.cpus = "1"
-            end
-            admin.vm.provision "shell", inline: <<-SHELL
-                sudo apt-get update
-                sudo apt-get install -y phpmyadmin
-                sudo sed -i 's/
-            SHELL
-        end
-        """
-
+    
 
 class Proxy:
     """
@@ -947,135 +511,10 @@ class Proxy:
             - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
         restart: unless-stopped
         logging:
-            driver: "json-file"
-            options:
-                max-size: "10m"
-                max-file: "3"
+            {get_logging()}
         """
 
-    def to_kubernetes(self):
-        """
-        This function returns the kubernetes data for the proxy
-        """
-        return f"""
-        apiVersion: v1
-        kind: Service
-        metadata:
-          name: proxy
-          labels:
-            app: proxy
-        spec:
-            ports:
-            - port: 80
-                targetPort: 80
-            - port: 443
-                targetPort: 443
-            selector:
-                app: proxy
-            type: ClusterIP
-        ---
-        apiVersion: apps/v1
-        kind: Deployment
-        metadata:
-            name: proxy
-            labels:
-                app: proxy
-        spec:
-            selector:
-                matchLabels:
-                    app: proxy
-            template:
-                metadata:
-                    labels:
-                        app: proxy
-                spec:
-                    containers:
-                    - name: proxy
-                        image: traefik:2.9
-                        ports:
-                        - containerPort: 80
-                        - containerPort: 443
-                        args:
-                        - "--log.level=WARN"
-                        - "--accesslog=true"
-                        - "--api.dashboard=true"
-                        - "--api.insecure=true"
-                        - "--ping=true"
-                        - "--ping.entrypoint=ping"
-                        - "--entryPoints.ping.address=:8082"
-                        - "--entryPoints.web.address=:80"
-                        - "--entryPoints.websecure.address=:443"
-                        - "--providers.docker=true"
-                        - "--providers.docker.endpoint=unix:///var/run/docker.sock"
-                        - "--providers.docker.exposedByDefault=false"
-                        - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-                        - "--certificatesresolvers.letsencrypt.acme.email={self.website_admin_email}"
-                        - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
-                        - "--metrics.prometheus=true"
-                        - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
-                        - "--global.checkNewVersion=true"
-                        - "--global.sendAnonymousUsage=false"
-                        volumeMounts:
-                        - mountPath: /var/run/docker.sock
-                            name: docker-socket
-                        - mountPath: /etc/traefik/acme
-                            name: acme-storage
-                    volumes:
-                    - name: docker-socket
-                        hostPath:
-                        path: /var/run/docker.sock
-                    - name: acme-storage
-                        hostPath:
-                        path: /etc/traefik/acme
-        """
-
-    def to_vagrant_vm(self):
-        """
-        This function returns the vagrant data for the proxy
-        """
-        return """
-        config.vm.define "proxy" do |proxy|
-            proxy.vm.box = "ubuntu/focal64"
-            proxy.vm.hostname = "proxy"
-            proxy.vm.network "private_network", ip: "
-            proxy.vm.provider "virtualbox" do |vb|
-                vb.memory = "1024"
-                vb.cpus = "1"
-            end
-            proxy.vm.provision "shell", inline: <<-SHELL
-                sudo apt-get update
-                sudo apt-get install -y apache2-utils
-                sudo apt-get install -y apt-transport-https
-                sudo apt-get install -y ca-certificates
-                sudo apt-get install -y curl
-                sudo apt-get install -y gnupg
-                sudo apt-get install -y lsb-release
-                sudo apt-get install -y wget
-                sudo apt-get install -y redis-server
-                sudo apt-get install -y mariadb-client
-                sudo apt-get install -y unzip
-                sudo apt-get install -y docker.io
-                sudo apt-get install -y docker-compose
-                sudo apt-get install -y apache2
-                sudo apt-get install -y php
-                sudo apt-get install -y php-mysql
-                sudo apt-get install -y php-curl
-                sudo apt-get install -y php-gd
-                sudo apt-get install -y php-intl
-                sudo apt-get install -y php-mbstring
-                sudo apt-get install -y php-soap
-                sudo apt-get install -y php-xml
-                sudo apt-get install -y php-xmlrpc
-                sudo apt-get install -y php-zip
-                sudo systemctl enable docker
-                sudo systemctl start docker
-                sudo systemctl enable apache2
-                sudo systemctl start apache2
-                sudo wget
-            SHELL
-        end
-        """
-
+   
 
 class Monitoring:
     """
@@ -1129,128 +568,9 @@ class Monitoring:
             - "traefik.docker.network=proxy-network"
         restart: unless-stopped
         logging:
-            driver: "json-file"
-            options:
-                max-size: "10m"
-                max-file: "3"
+            {get_logging()}
         """
 
-    def to_kubernetes(self):
-        """
-        This function returns the kubernetes data for the monitoring system
-        """
-        return f"""
-        apiVersion: v1
-        kind: Service
-        metadata:
-          name: monitoring
-          labels:
-            app: monitoring
-        spec:
-            ports:
-            - port: 8080
-                targetPort: 8080
-            selector:
-                app: monitoring
-            type: ClusterIP
-        ---
-        apiVersion: apps/v1
-        kind: Deployment
-        metadata:
-            name: monitoring
-            labels:
-                app: monitoring
-        spec:
-            selector:
-                matchLabels:
-                    app: monitoring
-            template:
-                metadata:
-                    labels:
-                        app: monitoring
-                spec:
-                    containers:
-                    - name: monitoring
-                        image: gcr.io/cadvisor/cadvisor:v0.39.0
-                        ports:
-                        - containerPort: 8080
-                        volumeMounts:
-                        - mountPath: /rootfs
-                            name: rootfs
-                            readOnly: true
-                        - mountPath: /var/run
-                            name: var-run
-                            readOnly: false
-                        - mountPath: /sys
-                            name: sys
-                            readOnly: true
-                        - mountPath: /var/lib/docker
-                            name: var-lib-docker
-                            readOnly: true
-                        env:
-                        - name: TZ
-                            value: Europe/Brussels
-                    volumes:
-                    - name: rootfs
-                        hostPath:
-                        path: /
-                    - name: var-run
-                        hostPath:
-                        path: /var/run
-                    - name: sys
-                        hostPath:
-                        path: /sys
-                    - name: var-lib-docker
-                        hostPath:
-                        path: /var/lib/docker
-        """
-
-    def to_vagrant_vm(self):
-        """
-        This function returns the vagrant data for the monitoring system
-        """
-        return """
-        config.vm.define "monitoring" do |monitoring|
-            monitoring.vm.box = "ubuntu/focal64"
-            monitoring.vm.hostname = "monitoring"
-            monitoring.vm.network "private_network", ip: "
-            monitoring.vm.provider "virtualbox" do |vb|
-                vb.memory = "1024"
-                vb.cpus = "1"
-            end
-            monitoring.vm.provision "shell", inline: <<-SHELL
-                sudo apt-get update
-                sudo apt-get install -y apache2-utils
-                sudo apt-get install -y apt-transport-https
-                sudo apt-get install -y ca-certificates
-                sudo apt-get install -y curl
-                sudo apt-get install -y gnupg
-                sudo apt-get install -y lsb-release
-                sudo apt-get install -y wget
-                sudo apt-get install -y redis-server
-                sudo apt-get install -y mariadb-client
-                sudo apt-get install -y unzip
-                sudo apt-get install -y docker.io
-                sudo apt-get install -y docker-compose
-                sudo apt-get install -y apache2
-                sudo apt-get install -y php
-                sudo apt-get install -y php-mysql
-                sudo apt-get install -y php-curl
-                sudo apt-get install -y php-gd
-                sudo apt-get install -y php-intl
-                sudo apt-get install -y php-mbstring
-                sudo apt-get install -y php-soap
-                sudo apt-get install -y php-xml
-                sudo apt-get install -y php-xmlrpc
-                sudo apt-get install -y php-zip
-                sudo systemctl enable docker
-                sudo systemctl start docker
-                sudo systemctl enable apache2
-                sudo systemctl start apache2
-                sudo wget
-            SHELL
-        end
-        """
 
 
 class Management:
@@ -1300,114 +620,10 @@ class Management:
             - "traefik.docker.network=proxy-network"
         restart: unless-stopped
         logging:
-            driver: "json-file"
-            options:
-                max-size: "10m"
-                max-file: "3"
+            {get_logging()}
         """
 
-    def to_kubernetes(self):
-        """
-        This function returns the kubernetes data for the management system
-        """
-        return """
-        apiVersion: v1
-        kind: Service
-        metadata:
-          name: management
-          labels:
-            app: management
-        spec:
-            ports:
-            - port: 9000
-                targetPort: 9000
-            selector:
-                app: management
-            type: ClusterIP
-        ---
-        apiVersion: apps/v1
-        kind: Deployment
-        metadata:
-            name: management
-            labels:
-                app: management
-        spec:
-            selector:
-                matchLabels:
-                    app: management
-            template:
-                metadata:
-                    labels:
-                        app: management
-                spec:
-                    containers:
-                    - name: management
-                        image: portainer/portainer-ce:latest
-                        ports:
-                        - containerPort: 9000
-                        volumeMounts:
-                        - mountPath: /var/run/docker.sock
-                            name: docker-socket
-                        - mountPath: /data
-                            name: data
-                        env:
-                        - name: TZ
-                            value: Europe/Brussels
-                    volumes:
-                    - name: docker-socket
-                        hostPath:
-                        path: /var/run/docker.sock
-                    - name: data
-                        hostPath:
-                        path: /data
-        """
-
-    def to_vagrant_vm(self):
-        """
-        This function returns the vagrant data for the management system
-        """
-        return """
-        config.vm.define "management" do |management|
-            management.vm.box = "ubuntu/focal64"
-            management.vm.hostname = "management"
-            management.vm.network "private_network", ip: "
-            management.vm.provider "virtualbox" do |vb|
-                vb.memory = "1024"
-                vb.cpus = "1"
-            end
-            management.vm.provision "shell", inline: <<-SHELL
-                sudo apt-get update
-                sudo apt-get install -y apache2-utils
-                sudo apt-get install -y apt-transport-https
-                sudo apt-get install -y ca-certificates
-                sudo apt-get install -y curl
-                sudo apt-get install -y gnupg
-                sudo apt-get install -y lsb-release
-                sudo apt-get install -y wget
-                sudo apt-get install -y redis-server
-                sudo apt-get install -y mariadb-client
-                sudo apt-get install -y unzip
-                sudo apt-get install -y docker.io
-                sudo apt-get install -y docker-compose
-                sudo apt-get install -y apache2
-                sudo apt-get install -y php
-                sudo apt-get install -y php-mysql
-                sudo apt-get install -y php-curl
-                sudo apt-get install -y php-gd
-                sudo apt-get install -y php-intl
-                sudo apt-get install -y php-mbstring
-                sudo apt-get install -y php-soap
-                sudo apt-get install -y php-xml
-                sudo apt-get install -y php-xmlrpc
-                sudo apt-get install -y php-zip
-                sudo systemctl enable docker
-                sudo systemctl start docker
-                sudo systemctl enable apache2
-                sudo systemctl start apache2
-                sudo wget
-            SHELL
-        end
-        """
+   
 
 
 class Networks:
@@ -1496,53 +712,9 @@ class Vault:
             - "traefik.enable=false"
         restart: unless-stopped
         logging:
-            driver: "json-file"
-            options:
-                max-size: "10m"
-                max-file: "3"
+            {get_logging()}
         """
 
-    def to_kubernetes(self):
-        """
-        This function returns the kubernetes data for the vault
-        """
-        return """
-        apiVersion: v1
-        kind: Service
-        metadata:
-          name: sha256
-          labels:
-            app: sha256
-        spec:
-            ports:
-            - port: 80
-                targetPort: 80
-            selector:
-                app: sha256
-            type: ClusterIP
-        ---
-        apiVersion: apps/v1
-        kind: Deployment
-        metadata:
-            name: sha256
-            labels:
-                app: sha256
-        spec:
-            selector:
-                matchLabels:
-                    app: sha256
-            template:
-                metadata:
-                    labels:
-                        app: sha256
-                spec:
-                    containers:
-                    - name: sha256
-                        image: alpine:latest
-                        ports:
-                        - containerPort: 80
-                        command: ["/bin/sh", "-c", "while true; do sleep 300; done;"]
-        """
 
 
 class Code:
@@ -1590,115 +762,10 @@ class Code:
             - "traefik.http.services.vscode.loadbalancer.passhostheader=true"
         restart: unless-stopped
         logging:
-            driver: "json-file"
-            options:
-                max-size: "10m"
-                max-file: "3"
+            {get_logging()}
         """
 
-    def to_kubernetes(self):
-        """
-        This function returns the kubernetes data for the code server
-        """
-        return f"""
-        apiVersion: v1
-        kind: Service
-        metadata:
-          name: code
-          labels:
-            app: code
-        spec:
-            ports:
-            - port: 8080
-                targetPort: 8080
-            selector:
-                app: code
-            type: ClusterIP
-        ---
-        apiVersion: apps/v1
-        kind: Deployment
-        metadata:
-            name: code
-            labels:
-                app: code
-        spec:
-            selector:
-                matchLabels:
-                    app: code
-            template:
-                metadata:
-                    labels:
-                        app: code
-                spec:
-                    containers:
-                    - name: code
-                        image: codercom/code-server
-                        ports:
-                        - containerPort: 8080
-                        env:
-                        - name: PASSWORD
-                            value: {self.code_password}
-                        - name: SUDO_PASSWORD
-                            value: {self.code_password}
-                        - name: TZ
-                            value: Europe/Brussels
-                        - name: PROXY_DOMAIN
-                            value: {self.proxy_domain}
-                        - name: PROXY_PORT
-                            value: {self.proxy_port}
-        """
-
-    def to_vagrant_vm(self):
-        """
-        Converts the current object to a Vagrant virtual machine configuration.
-
-        Returns:
-            str: Vagrant virtual machine configuration as a multi-line string.
-        """
-        return """
-        config.vm.define "code" do |code|
-            code.vm.box = "ubuntu/focal64"
-            code.vm.hostname = "code"
-            code.vm.network "private_network", ip: "
-            code.vm.provider "virtualbox" do |vb|
-                vb.memory = "1024"
-                vb.cpus = "1"
-            end
-            code.vm.provision "shell", inline: <<-SHELL
-                sudo apt-get update
-                sudo apt-get install -y apache2-utils
-                sudo apt-get install -y apt-transport-https
-                sudo apt-get install -y ca-certificates
-                sudo apt-get install -y curl
-                sudo apt-get install -y gnupg
-                sudo apt-get install -y lsb-release
-                sudo apt-get install -y wget
-                sudo apt-get install -y redis-server
-                sudo apt-get install -y mariadb-client
-                sudo apt-get install -y unzip
-                sudo apt-get install -y docker.io
-                sudo apt-get install -y docker-compose
-                sudo apt-get install -y apache2
-                sudo apt-get install -y php
-                sudo apt-get install -y php-mysql
-                sudo apt-get install -y php-curl
-                sudo apt-get install -y php-gd
-                sudo apt-get install -y php-intl
-                sudo apt-get install -y php-mbstring
-                sudo apt-get install -y php-soap
-                sudo apt-get install -y php-xml
-                sudo apt-get install -y php-xmlrpc
-                sudo apt-get install -y php-zip
-                sudo systemctl enable docker
-                sudo systemctl start docker
-                sudo systemctl enable apache2
-                sudo systemctl start apache2
-                sudo wget
-            SHELL
-        end
-        """
-
-
+    
 class Application:
     """
     Represents an application associated with a website.
@@ -1752,125 +819,9 @@ class Application:
             - "traefik.enable=false"
         restart: unless-stopped
         logging:
-            driver: "json-file"
-            options:
-                max-size: "10m"
-                max-file: "3"
+            {get_logging()}
         """
 
-    def to_kubernetes(self):
-        """
-        Converts the Application object to a Kubernetes data string.
-
-        Returns:
-            str: The Kubernetes data string representing the Application object.
-        """
-        return """
-        apiVersion: v1
-        kind: Service
-        metadata:
-          name: application
-          labels:
-            app: application
-        spec:
-            ports:
-            - port: 80
-                targetPort: 80
-            selector:
-                app: application
-            type: ClusterIP
-        ---
-        apiVersion: apps/v1
-        kind: Deployment
-        metadata:
-            name: application
-            labels:
-                app: application
-        spec:
-            selector:
-                matchLabels:
-                    app: application
-            template:
-                metadata:
-                    labels:
-                        app: application
-                spec:
-                    containers:
-                    - name: application
-                        image: docker.io/yilmazchef/woopy-app:latest
-                    ports:
-                    - containerPort: 80
-                    volumeMounts:
-                    - mountPath: /var/run/docker.sock
-                        name: docker-socket
-                    - mountPath: /data
-                        name: data
-                    env:
-                    - name: TZ
-                        value: Europe/Brussels
-                    
-                    volumes:
-                    - name: docker-socket
-                        hostPath:
-                        path: /var/run/docker.sock
-                    - name: data
-                        hostPath:
-                        path: /data
-                        
-        """
-
-    def to_vagrant_vm(self):
-        """
-        Converts the Application object to a Vagrant virtual machine configuration.
-
-        Returns:
-            str: Vagrant virtual machine configuration as a multi-line string.
-        """
-        return """
-        config.vm.define "application" do |application|
-            application.vm.box = "ubuntu/focal64"
-            application.vm.hostname = "application"
-            application.vm.network "private_network", ip: "
-            application.vm.provider "virtualbox" do |vb|
-                vb.memory = "1024"
-                vb.cpus = "1"
-            end
-            application.vm.provision "shell", inline: <<-SHELL
-                sudo apt-get update
-                sudo apt-get install -y apache2-utils
-                sudo apt-get install -y apt-transport-https
-                sudo apt-get install -y ca-certificates
-                sudo apt-get install -y curl
-                sudo apt-get install -y gnupg
-                sudo apt-get install -y lsb-release
-                sudo apt-get install -y wget
-                sudo apt-get install -y redis-server
-                sudo apt-get install -y mariadb-client
-                sudo apt-get install -y unzip
-                sudo apt-get install -y docker.io
-                sudo apt-get install -y docker-compose
-                sudo apt-get install -y apache2
-                sudo apt-get install -y php
-                sudo apt-get install -y php-mysql
-                sudo apt-get install -y php-curl
-                sudo apt-get install -y php-gd
-                sudo apt-get install -y php-intl
-                sudo apt-get install -y php-mbstring
-                sudo apt-get install -y php-soap
-                sudo apt-get install -y php-xml
-                sudo apt-get install -y php-xmlrpc
-                sudo apt-get install -y php-zip
-                sudo systemctl enable docker
-                sudo systemctl start docker
-                sudo systemctl enable apache2
-                sudo systemctl start apache2
-                sudo wget
-
-                docker pull docker.io/yilmazchef/woopy-app:latest
-                docker run --name woopy-app --network=website-network --restart=unless-stopped --detach --publish 5000:5000 docker.io/yilmazchef/woopy-app:latest
-            SHELL
-        end
-        """
 
 class ReadMe():
     """
@@ -2293,36 +1244,6 @@ Volumes:
 
         return report
 
-    def get_kubernetes_data(self):
-        """
-        Converts the Project object to a Kubernetes data string.
-        """
-        kubernetes_yaml = f"""
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: {self.project_name}
----
-{self.database.to_kubernetes()}
----
-{self.website.to_kubernetes()}
----
-{self.admin.to_kubernetes()}
----
-{self.proxy.to_kubernetes()}
----
-{self.cache.to_kubernetes()}
----
-{self.monitoring.to_kubernetes()}
----
-{self.management.to_kubernetes()}
----
-{self.vault.to_kubernetes()}
----
-{self.code.to_kubernetes()}
-"""
-
-        return kubernetes_yaml
 
 
 class Health(Resource):
