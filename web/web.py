@@ -177,7 +177,7 @@ class Database:
         self.database_user = generate_username()
         self.database_password = generate_password()
         self.database_root_password = generate_password()
-        self.database_host = generate_service(site_title)
+        self.database_host = f"{site_title}-database"
         self.database_port = get_port("MySQL")
         self.database_character_set = "utf8mb4"
         self.database_table_prefix = "woopy_"
@@ -221,7 +221,7 @@ class Cache:
     """
 
     def __init__(self, site_title: str):
-        self.cache_host = generate_service(site_title)
+        self.cache_host = f"{site_title}-cache"
         self.cache_port = get_port("Redis")
         self.cache_username = generate_username()
         self.cache_password = generate_password()
@@ -264,7 +264,7 @@ class Mail:
     """
 
     def __init__(self, site_title: str, site_url: str):
-        self.mail_host = generate_service(site_title)
+        self.mail_host = f"{site_title}-mail"
         self.mail_base_url = f"{site_url}"
         self.mail_username = generate_username()
         self.mail_password = generate_password()
@@ -315,7 +315,7 @@ class Website:
         self.database_user = f"{database_props.database_user}"
         self.database_password = f"{database_props.database_password}"
         self.database_table_prefix = f"{database_props.database_table_prefix}"
-        self.website_host = generate_service(site_title)
+        self.website_host = f"{site_url}-website"
         self.website_title = f"{site_title}"
         self.website_url = f"{site_url}"
         self.website_description = f"Add description here for {site_title}: {datetime.now()}"
@@ -395,7 +395,7 @@ class Admin:
     """
 
     def __init__(self, site_title: str, database_props: Database):
-        self.admin_host = generate_service(site_title)
+        self.admin_host = f"{site_title}-admin"
         self.database_host = f"{database_props.database_host}"
         self.database_port = f"{database_props.database_port}"
         self.database_user = f"{database_props.database_user}"
@@ -449,7 +449,7 @@ class Proxy:
     def __init__(self, site_title: str):
         self.proxy_username = generate_username()
         self.proxy_password = generate_password()
-        self.proxy_title = generate_service(site_title)
+        self.proxy_title = f"{site_title}-proxy"
         self.proxy_host = self.proxy_title
         self.proxy_port = get_port("Traefik")
         self.proxy_username = generate_username()
@@ -522,7 +522,7 @@ class Monitoring:
     """
 
     def __init__(self, site_title: str):
-        self.monitoring_host = generate_service(site_title)
+        self.monitoring_host = f"{site_title}-monitoring"
         self.monitoring_port = get_port("Cadvisor")
         self.monitoring_username = generate_username()
         self.montiroing_email = generate_email(self.monitoring_host, "monitoring")
@@ -579,7 +579,7 @@ class Management:
     """
 
     def __init__(self, site_title: str):
-        self.management_host = generate_service(site_title)
+        self.management_host = f"{site_title}-management"
         self.management_port = get_port("Portainer")
         self.management_username = generate_username()
         self.management_email = generate_email(self.management_host, "management")
@@ -686,7 +686,7 @@ class Vault:
     """
 
     def __init__(self, site_title: str):
-        self.vault_host = generate_service(site_title)
+        self.vault_host = f"{site_title}-vault"
         self.vault_port = get_port("Vault")
         self.vault_username = generate_username()
         self.vault_email = generate_email(self.vault_host, "vault")
@@ -723,7 +723,7 @@ class Code:
     """
 
     def __init__(self, site_title: str, site_host: str):
-        self.code_host = generate_service(site_title)
+        self.code_host = f"{site_title}-code"
         self.code_port = get_port("Code")
         self.code_username = generate_username()
         self.code_email = generate_email(self.code_host, "code")
@@ -783,7 +783,7 @@ class Application:
             website (Website): The website object associated with the application.
             version (str, optional): The version of the application (default is "1.0").
         """
-        self.app_host= generate_service(site_title)
+        self.app_host= f"{site_title}-app"
         self.project_name = self.app_host
         self.app_name = self.app_host
         # reverse the host name. for example if the host url is "h2oheating.xyz" then the bundle will be "xyz.h2oheating"
