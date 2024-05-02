@@ -3,7 +3,7 @@ import os
 import secrets
 import tempfile
 from datetime import datetime
-
+import socket
 
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
@@ -144,8 +144,7 @@ def is_local_setup() -> bool:
     Check if the setup is local
     """
     # Check if the hostname is localhost
-    import socket
-    return socket.gethostname() == "localhost"
+    return socket.gethostname() == "localhost" or socket.gethostname() == "127.0.0.1" or socket.gethostname() == "0.0.0.0" or socket.gethostname() == "::1"
 
 
 def get_logging() -> str:
@@ -336,7 +335,52 @@ class Website:
         """
         This function returns the docker-compose.yml data for the website
         """
-        return f"""
+        
+        website_local: str = f"""
+    website:
+        image: wordpress:latest
+        container_name: website
+        volumes:
+            - website-data:/var/www/html
+        ports:
+            - "8080:80"
+            - "8443:443"
+        environment:
+            WORDPRESS_DB_HOST: {self.database_host}:{self.database_port}
+            WORDPRESS_DB_NAME: {self.database_name}
+            WORDPRESS_DB_USER: {self.database_user}
+            WORDPRESS_DB_PASSWORD: {self.database_password}
+            WORDPRESS_TABLE_PREFIX: {self.database_table_prefix}
+            WORDPRESS_BLOG_NAME: {self.website_title}
+            WORDPRESS_USERNAME: {self.website_admin_username}
+            WORDPRESS_PASSWORD: {self.website_admin_password}
+            WORDPRESS_EMAIL: {self.website_admin_email}
+            WORDPRESS_SMTP_HOST: {self.mail_smtp_host}
+            WORDPRESS_SMTP_PORT: {self.mail_smtp_port}
+            WORDPRESS_SMTP_USER: {self.mail_smtp_user}
+            WORDPRESS_SMTP_PASSWORD: {self.mail_smtp_password}
+            WORDPRESS_SMTP_PROTOCOL: {self.mail_smtp_protocol}
+            WORDPRESS_CACHE_ENABLED: "true"
+            WORDPRESS_CACHE_DURATION: "1440"
+            WORDPRESS_CACHE_TYPE: "redis"
+            WORDPRESS_REDIS_HOST: {self.cache_host}
+            WORDPRESS_REDIS_PORT: {self.cache_port}
+            WORDPRESS_REDIS_DATABASE: "0"
+            WORDPRESS_REDIS_PASSWORD: {self.cache_password}
+            WORDPRESS_SITE_URL: {self.website_url}
+        networks:
+            - website-network
+            - proxy-network
+        depends_on:
+            - database
+        labels:
+            - "traefik.enable=false"
+        restart: unless-stopped
+        logging:
+            {get_logging()}
+        """
+        
+        website_remote: str = f"""
     website:
         image: bitnami/wordpress:latest
         container_name: website
@@ -387,6 +431,8 @@ class Website:
         logging:
             {get_logging()}
         """
+        
+        return website_local if is_local_setup() else website_remote
 
 
 class Admin:
