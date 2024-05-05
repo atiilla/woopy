@@ -165,6 +165,7 @@ class Database:
         self.database_character_set = "utf8mb4"
         self.database_table_prefix = "woopy_"
         self.site_profile = site_profile
+        self.site_title = site_title
 
     # String representation of the class is docker-compose.yml data
     def to_docker_compose(self):
@@ -173,7 +174,7 @@ class Database:
         """
         remote_profile = f"""
     {self.database_host}:
-        image: mariadb:11.1
+        image: mariadb:latest
         container_name: {self.database_host}
         hostname: {self.database_host}
         volumes:
@@ -187,7 +188,7 @@ class Database:
             MARIADB_PORT_NUMBER: {self.database_port}
             MARIADB_CHARACTER_SET: {self.database_character_set}
         networks:
-            - proxy-network
+            - {self.site_title}-network
         restart: unless-stopped
         healthcheck:
             test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
@@ -200,21 +201,21 @@ class Database:
         
         local_profile = f"""
     {self.database_host}:
-        image: mysql:latest
+        image: mariadb:latest
         container_name: {self.database_host}
         hostname: {self.database_host}
         volumes:
             - ./{self.database_host}/:/var/lib/mysql
         environment:
-            MYSQL_DATABASE: {self.database_name}
-            MYSQL_USER: {self.database_user}
-            MYSQL_PASSWORD: {self.database_password}
-            MYSQL_ROOT_PASSWORD: {self.database_root_password}
-            MYSQL_HOST: {self.database_host}
-            MYSQL_PORT_NUMBER: {self.database_port}
-            MYSQL_CHARACTER_SET: {self.database_character_set}
+            MARIADB_DATABASE: {self.database_name}
+            MARIADB_USER: {self.database_user}
+            MARIADB_PASSWORD: {self.database_password}
+            MARIADB_ROOT_PASSWORD: {self.database_root_password}
+            MARIADB_HOST: {self.database_host}
+            MARIADB_PORT_NUMBER: {self.database_port}
+            MARIADB_CHARACTER_SET: {self.database_character_set}
         networks:
-            - website-network
+            - {self.site_title}-network
         restart: unless-stopped
         healthcheck:
             test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
@@ -240,6 +241,7 @@ class Cache:
         self.cache_username = generate_username()
         self.cache_password = generate_password()
         self.site_profile = site_profile
+        self.site_title = site_title
 
     def to_docker_compose(self):
         """
@@ -263,9 +265,7 @@ class Cache:
         volumes:
             - ./{self.cache_host}/:/data
         networks:
-            - website-network
-        depends_on:
-            - website
+            - {self.site_title}-network
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.redis.rule=Host(`{self.cache_host}`)" 
@@ -275,7 +275,7 @@ class Cache:
             - "traefik.http.routers.redis.tls=true"
             - "traefik.http.routers.redis.tls.certresolver=letsencrypt"
             - "traefik.http.services.redis.loadbalancer.passhostheader=true"
-            - "traefik.docker.network=proxy-network"
+            - "traefik.docker.network={self.site_title}-network"
             - "traefik.http.routers.redis.middlewares=compresstraefik"
             - "traefik.http.middlewares.compresstraefik.compress=true"
             - "traefik.http.routers.redis.middlewares=authtraefik"
@@ -303,9 +303,7 @@ class Cache:
         volumes:
             - ./{self.cache_host}/:/data
         networks:
-            - website-network
-        depends_on:
-            - website
+            - {self.site_title}-network
         labels:
             - "traefik.enable=false"
         restart: unless-stopped
@@ -354,7 +352,7 @@ class Mail:
             - "587:587"
             - "465:465"
         networks:
-            - proxy-network
+            - {self.site_title}-network
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.mailhog.rule=Host(`{self.mail_host}`)"
@@ -364,7 +362,7 @@ class Mail:
             - "traefik.http.routers.mailhog.tls=true"
             - "traefik.http.routers.mailhog.tls.certresolver=letsencrypt"
             - "traefik.http.services.mailhog.loadbalancer.passhostheader=true"
-            - "traefik.docker.network=proxy-network"
+            - "traefik.docker.network={self.site_title}-network"
             - "traefik.http.routers.mailhog.middlewares=compresstraefik"
             - "traefik.http.middlewares.compresstraefik.compress=true"
             - "traefik.http.routers.mailhog.middlewares=authtraefik"
@@ -392,7 +390,7 @@ class Mail:
             - "587:587"
             - "465:465"
         networks:
-            - website-network
+            - {self.site_title}-network
         labels:
             - "traefik.enable=false"
         restart: unless-stopped
@@ -416,8 +414,8 @@ class Website:
         self.database_user = f"{database_props.database_user}"
         self.database_password = f"{database_props.database_password}"
         self.database_table_prefix = f"{database_props.database_table_prefix}"
-        self.website_host = f"{site_url}-website"
-        self.website_title = f"{site_title}"
+        self.website_host = f"{site_title}-website"
+        self.site_title = f"{site_title}"
         self.site_profile = site_profile
         self.website_url = f"{site_url}"
         self.website_description = f"Add description here for {site_title}: {datetime.now()}"
@@ -441,39 +439,45 @@ class Website:
         
         remote_profile: str = f"""
     {self.website_host}:
-        image: bitnami/wordpress:latest
+        image: wordpress:latest
         container_name: {self.website_host}
         hostname: {self.website_host}
         volumes:
-            - ./{self.website_host}/:/bitnami/wordpress
+            - ./{self.website_host}/:/var/www/html
         environment:
-            WORDPRESS_DATABASE_HOST: {self.database_host}
-            WORDPRESS_DATABASE_PORT_NUMBER: {self.database_port}
-            WORDPRESS_DATABASE_NAME: {self.database_name}
-            WORDPRESS_DATABASE_USER: {self.database_user}
-            WORDPRESS_DATABASE_PASSWORD: {self.database_password}
-            WORDPRESS_TABLE_PREFIX: {self.database_table_prefix}
-            WORDPRESS_BLOG_NAME: {self.website_title}
-            WORDPRESS_USERNAME: {self.website_admin_username}
-            WORDPRESS_PASSWORD: {self.website_admin_password}
-            WORDPRESS_EMAIL: {self.website_admin_email}
-            WORDPRESS_SMTP_HOST: {self.mail_smtp_host}
-            WORDPRESS_SMTP_PORT: {self.mail_smtp_port}
-            WORDPRESS_SMTP_USER: {self.mail_smtp_user}
-            WORDPRESS_SMTP_PASSWORD: {self.mail_smtp_password}
-            WORDPRESS_SMTP_PROTOCOL: {self.mail_smtp_protocol}
-            WORDPRESS_CACHE_ENABLED: "true"
-            WORDPRESS_CACHE_DURATION: "1440"
-            WORDPRESS_CACHE_TYPE: "redis"
-            WORDPRESS_REDIS_HOST: {self.cache_host}
-            WORDPRESS_REDIS_PORT: {self.cache_port}
-            WORDPRESS_REDIS_DATABASE: "0"
-            WORDPRESS_REDIS_PASSWORD: {self.cache_password}
-            WORDPRESS_SITE_URL: {self.website_url}
+            - WORDPRESS_DATABASE_HOST={self.database_host}
+            - WORDPRESS_DATABASE_PORT_NUMBER={self.database_port}
+            - WORDPRESS_DATABASE_NAME={self.database_name}
+            - WORDPRESS_DATABASE_USER={self.database_user}
+            - WORDPRESS_DATABASE_PASSWORD={self.database_password}
+            - WORDPRESS_TABLE_PREFIX={self.database_table_prefix}
+            - WORDPRESS_BLOG_NAME={self.site_title}
+            - WORDPRESS_USERNAME={self.website_admin_username}
+            - WORDPRESS_PASSWORD={self.website_admin_password}
+            - WORDPRESS_EMAIL={self.website_admin_email}
+            - WORDPRESS_SMTP_HOST={self.mail_smtp_host}
+            - WORDPRESS_SMTP_PORT={self.mail_smtp_port}
+            - WORDPRESS_SMTP_USER={self.mail_smtp_user}
+            - WORDPRESS_SMTP_PASSWORD={self.mail_smtp_password}
+            - WORDPRESS_SMTP_PROTOCOL={self.mail_smtp_protocol}
+            - WORDPRESS_CACHE_ENABLED=true
+            - WORDPRESS_CACHE_DURATION=1440
+            - WORDPRESS_CACHE_TYPE=redis
+            - WORDPRESS_REDIS_HOST={self.cache_host}
+            - WORDPRESS_REDIS_PORT={self.cache_port}
+            - WORDPRESS_REDIS_DATABASE=0
+            - WORDPRESS_REDIS_PASSWORD={self.cache_password}
+            - WORDPRESS_SITE_URL={self.website_url}
         networks:
-            - proxy-network
+            - {self.site_title}-network
         depends_on:
             - {self.database_host}
+            - {self.cache_host}
+            - {self.mail_smtp_host}
+        links:
+            - {self.database_host}:{self.database_host}
+            - {self.cache_host}:{self.cache_host}
+            - {self.mail_smtp_host}:{self.mail_smtp_host}
         labels:
             - "traefik.enable=true"
             - "traefik.http.routers.wordpress.rule=Host(`{self.website_host}`)"
@@ -483,7 +487,7 @@ class Website:
             - "traefik.http.routers.wordpress.tls=true"
             - "traefik.http.routers.wordpress.tls.certresolver=letsencrypt"
             - "traefik.http.services.wordpress.loadbalancer.passhostheader=true"
-            - "traefik.docker.network=proxy-network"
+            - "traefik.docker.network={self.site_title}-network"
             - "traefik.http.routers.wordpress.middlewares=compresstraefik"
             - "traefik.http.middlewares.compresstraefik.compress=true"
             - "traefik.http.routers.wordpress.middlewares=authtraefik"
@@ -495,39 +499,45 @@ class Website:
         
         local_profile: str = f"""
     {self.website_host}:
-        image: bitnami/wordpress:latest
+        image: wordpress:latest
         container_name: {self.website_host}
         hostname: {self.website_host}
         volumes:
-            - ./{self.website_host}/:/bitnami/wordpress
+            - ./{self.website_host}/:/var/www/html
         environment:
-            WORDPRESS_DATABASE_HOST: {self.database_host}
-            WORDPRESS_DATABASE_PORT_NUMBER: {self.database_port}
-            WORDPRESS_DATABASE_NAME: {self.database_name}
-            WORDPRESS_DATABASE_USER: {self.database_user}
-            WORDPRESS_DATABASE_PASSWORD: {self.database_password}
-            WORDPRESS_TABLE_PREFIX: {self.database_table_prefix}
-            WORDPRESS_BLOG_NAME: {self.website_title}
-            WORDPRESS_USERNAME: {self.website_admin_username}
-            WORDPRESS_PASSWORD: {self.website_admin_password}
-            WORDPRESS_EMAIL: {self.website_admin_email}
-            WORDPRESS_SMTP_HOST: {self.mail_smtp_host}
-            WORDPRESS_SMTP_PORT: {self.mail_smtp_port}
-            WORDPRESS_SMTP_USER: {self.mail_smtp_user}
-            WORDPRESS_SMTP_PASSWORD: {self.mail_smtp_password}
-            WORDPRESS_SMTP_PROTOCOL: {self.mail_smtp_protocol}
-            WORDPRESS_CACHE_ENABLED: "true"
-            WORDPRESS_CACHE_DURATION: "1440"
-            WORDPRESS_CACHE_TYPE: "redis"
-            WORDPRESS_REDIS_HOST: {self.cache_host}
-            WORDPRESS_REDIS_PORT: {self.cache_port}
-            WORDPRESS_REDIS_DATABASE: "0"
-            WORDPRESS_REDIS_PASSWORD: {self.cache_password}
-            WORDPRESS_SITE_URL: {self.website_url}
+            - WORDPRESS_DATABASE_HOST={self.database_host}
+            - WORDPRESS_DATABASE_PORT_NUMBER={self.database_port}
+            - WORDPRESS_DATABASE_NAME={self.database_name}
+            - WORDPRESS_DATABASE_USER={self.database_user}
+            - WORDPRESS_DATABASE_PASSWORD={self.database_password}
+            - WORDPRESS_TABLE_PREFIX={self.database_table_prefix}
+            - WORDPRESS_BLOG_NAME={self.site_title}
+            - WORDPRESS_USERNAME={self.website_admin_username}
+            - WORDPRESS_PASSWORD={self.website_admin_password}
+            - WORDPRESS_EMAIL={self.website_admin_email}
+            - WORDPRESS_SMTP_HOST={self.mail_smtp_host}
+            - WORDPRESS_SMTP_PORT={self.mail_smtp_port}
+            - WORDPRESS_SMTP_USER={self.mail_smtp_user}
+            - WORDPRESS_SMTP_PASSWORD={self.mail_smtp_password}
+            - WORDPRESS_SMTP_PROTOCOL={self.mail_smtp_protocol}
+            - WORDPRESS_CACHE_ENABLED=true
+            - WORDPRESS_CACHE_DURATION=1440
+            - WORDPRESS_CACHE_TYPE=redis
+            - WORDPRESS_REDIS_HOST={self.cache_host}
+            - WORDPRESS_REDIS_PORT={self.cache_port}
+            - WORDPRESS_REDIS_DATABASE=0
+            - WORDPRESS_REDIS_PASSWORD={self.cache_password}
+            - WORDPRESS_SITE_URL={self.website_url}
         networks:
-            - website-network
+            - {self.site_title}-network
         depends_on:
             - {self.database_host}
+            - {self.cache_host}
+            - {self.mail_smtp_host}
+        links:
+            - {self.database_host}:{self.database_host}
+            - {self.cache_host}:{self.cache_host}
+            - {self.mail_smtp_host}:{self.mail_smtp_host}
         labels:
             - "traefik.enable=false"
         restart: unless-stopped
@@ -570,19 +580,21 @@ class Admin:
             PMA_PASSWORD: {self.database_password}
             PMA_ARBITRARY: 1
         networks:
-            - proxy-network
+            - {self.site_title}-network
         depends_on:
             - {self.database_host}
+        links:
+            - {self.database_host}:{self.database_host}
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.{self.admin_host}`)"
+            - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.{self.site_title}`)"
             - "traefik.http.routers.phpmyadmin.service=phpmyadmin"
             - "traefik.http.routers.phpmyadmin.entrypoints=websecure"
             - "traefik.http.services.phpmyadmin.loadbalancer.server.port=80"
             - "traefik.http.routers.phpmyadmin.tls=true"
             - "traefik.http.routers.phpmyadmin.tls.certresolver=letsencrypt"
             - "traefik.http.services.phpmyadmin.loadbalancer.passhostheader=true"
-            - "traefik.docker.network=proxy-network"
+            - "traefik.docker.network={self.site_title}-network"
             - "traefik.http.routers.phpmyadmin.middlewares=authtraefik"
             - "traefik.http.middlewares.authtraefik.basicauth.users={self.admin_username}:{self.admin_password}"
         restart: unless-stopped
@@ -602,9 +614,11 @@ class Admin:
             PMA_PASSWORD: {self.database_password}
             PMA_ARBITRARY: 1
         networks:
-            - website-network
+            - {self.site_title}-network
         depends_on:
             - {self.database_host}
+        links:
+            - {self.database_host}:{self.database_host}
         labels:
             - "traefik.enable=false"
         restart: unless-stopped
@@ -666,15 +680,13 @@ class Proxy:
             - /var/run/docker.sock:/var/run/docker.sock
             - ./{self.proxy_host}/:/etc/traefik/acme/
         networks:
-            - proxy-network
-        depends_on:
-            - {self.site_title}-website
+            - {self.site_title}-network
         ports:
             - "8080:80"
             - "443:443"
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.dashboard.rule=Host(`traefik.{self.proxy_host}`)"
+            - "traefik.http.routers.dashboard.rule=Host(`traefik.{self.site_title}`)"
             - "traefik.http.routers.dashboard.service=api@internal"
             - "traefik.http.routers.dashboard.entrypoints=websecure"
             - "traefik.http.services.dashboard.loadbalancer.server.port=8080"
@@ -730,21 +742,17 @@ class Monitoring:
         environment:
             - TZ=Europe/Brussels
         networks:
-            - proxy-network
-        depends_on:
-            - {self.site_title}-website
-            - {self.site_title}-database
-            - {self.site_title}-cache
+            - {self.site_title}-network
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.cadvisor.rule=Host(`cadvisor.{self.monitoring_host}`)"
+            - "traefik.http.routers.cadvisor.rule=Host(`cadvisor.{self.site_title}`)"
             - "traefik.http.routers.cadvisor.service=cadvisor"
             - "traefik.http.routers.cadvisor.entrypoints=websecure"
             - "traefik.http.services.cadvisor.loadbalancer.server.port=8080"
             - "traefik.http.routers.cadvisor.tls=true"
             - "traefik.http.routers.cadvisor.tls.certresolver=letsencrypt"
             - "traefik.http.services.cadvisor.loadbalancer.passhostheader=true"
-            - "traefik.docker.network=proxy-network"
+            - "traefik.docker.network={self.site_title}-network"
         restart: unless-stopped
         logging:
             {get_logging()}
@@ -766,11 +774,7 @@ class Monitoring:
         environment:
             - TZ=Europe/Brussels
         networks:
-            - website-network
-        depends_on:
-            - {self.site_title}-website
-            - {self.site_title}-database
-            - {self.site_title}-cache
+            - {self.site_title}-network
         labels:
             - "traefik.enable=false"
         restart: unless-stopped
@@ -812,21 +816,17 @@ class Management:
             - /var/run/docker.sock:/var/run/docker.sock
             - ./{self.management_host}/:/data
         networks:
-            - proxy-network
-        depends_on:
-            - {self.site_title}-website
-            - {self.site_title}-database
-            - {self.site_title}-cache
+            - {self.site_title}-network
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.portainer.rule=Host(`portainer.{self.management_host}`)"
+            - "traefik.http.routers.portainer.rule=Host(`portainer.{self.site_title}`)"
             - "traefik.http.routers.portainer.service=portainer"
             - "traefik.http.routers.portainer.entrypoints=websecure"
             - "traefik.http.services.portainer.loadbalancer.server.port=9000"
             - "traefik.http.routers.portainer.tls=true"
             - "traefik.http.routers.portainer.tls.certresolver=letsencrypt"
             - "traefik.http.services.portainer.loadbalancer.passhostheader=true"
-            - "traefik.docker.network=proxy-network"
+            - "traefik.docker.network={self.site_title}-network"
             - "traefik.http.routers.portainer.middlewares=authtraefik"
             - "traefik.http.middlewares.authtraefik.basicauth.users={self.management_username}:{self.management_password}"
         restart: unless-stopped
@@ -846,11 +846,7 @@ class Management:
             - /var/run/docker.sock:/var/run/docker.sock
             - ./{self.management_host}/:/data
         networks:
-            - website-network
-        depends_on:
-            - {self.site_title}-website
-            - {self.site_title}-database
-            - {self.site_title}-cache
+            - {self.site_title}-network
         labels:
             - "traefik.enable=false"
         restart: unless-stopped
@@ -889,10 +885,7 @@ class Vault:
             /bin/sh -c "echo Vault password (encrypted):" && echo -n '{self.vault_password}' | sha256sum
             /bin/sh -c "while true; do sleep 300; done;"
         networks:
-            - proxy-network
-            - website-network
-        depends_on:
-            - {self.site_title}-website
+            - {self.site_title}-network
         labels:
             - "traefik.enable=false"
         restart: unless-stopped
@@ -936,12 +929,10 @@ class Code:
         volumes:
             - ./{self.code_host}/:/home/coder/project
         networks:
-            - proxy-network
-        depends_on:
-            - {self.site_title}-website
+            - {self.site_title}-network
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.vscode.rule=Host(`vscode.{self.code_host}`)"
+            - "traefik.http.routers.vscode.rule=Host(`vscode.{self.site_title}`)"
             - "traefik.http.routers.vscode.service=vscode"
             - "traefik.http.routers.vscode.entrypoints=websecure"
             - "traefik.http.services.vscode.loadbalancer.server.port=8080"
@@ -1003,9 +994,7 @@ class Application:
         command: >
             /bin/bash -c "/app/entrypoint.sh"
         networks:
-            - website-network
-        depends_on:
-            - {self.site_title}-website
+            - {self.site_title}-network
         labels:
             - "traefik.enable=false"
         restart: unless-stopped
@@ -1314,7 +1303,7 @@ class Project:
     def __init__(self, website: Website = None, database: Database = None, cache: Cache = None,
                  admin: Admin = None, proxy: Proxy = None, monitoring: Monitoring = None,
                  management: Management = None, vault: Vault = None, code: Code = None,
-                 application: Application = None):
+                 mail: Mail = None, application: Application = None):
         """
         Initializes a new instance of the Project class.
         Create a temp directory in the user profile on the project name. For example: $HOME/.woopy/{project_name}
@@ -1344,6 +1333,7 @@ class Project:
         self.vault = vault
         self.code = code
         self.application = application
+        self.mail = mail
 
     def get_docker_compose_data(self):
         """
@@ -1351,8 +1341,7 @@ class Project:
         """
         docker_compose_yaml = f"""
 networks:
-    website-network: {{}}
-    proxy-network: {{}}
+    {self.website.site_title}-network: {{}}
 
 services:
     {self.database.to_docker_compose()}
@@ -1365,6 +1354,7 @@ services:
     {self.vault.to_docker_compose()}
     {self.code.to_docker_compose()}
     {self.application.to_docker_compose()}
+    {self.mail.to_docker_compose()}
 """
 
         return docker_compose_yaml
@@ -1417,6 +1407,7 @@ Code Hostname: {self.code.code_host}
 Code Port: {self.code.code_port}
 Code Username: {self.code.code_username}
 Code Password: {self.code.code_password}
+Code Profile: {self.code.site_profile}
 -------------------------------------------------------------
 Application Name: {self.application.app_name}
 Application Version: {self.application.version}
@@ -1427,10 +1418,16 @@ Application Author Email: {self.application.author_email}
 Application Formal Name: {self.application.formal_name}
 Application Description: {self.application.description}
 Application Long Description: {self.application.long_description}'
+Application Profile: {self.application.site_profile}
+-------------------------------------------------------------
+Mail Hostname: {self.mail.mail_host}
+Mail Port: {self.mail.mail_port}
+Mail Username: {self.mail.mail_username}
+Mail Password: {self.mail.mail_password}
+Mail Profile: {self.mail.site_profile}
 -------------------------------------------------------------
 networks:
-website-network
-proxy-network
+{self.website.site_title}-network
 -------------------------------------------------------------
         """
 
@@ -1601,9 +1598,9 @@ class ProjectApi(Resource):
         site_profile=env["SITE_PROFILE"]
 
         database = Database(site_title=site_title, site_profile=site_profile)
-        email = Mail(site_title=site_title, site_url=site_url, site_profile=site_profile)
+        mail = Mail(site_title=site_title, site_url=site_url, site_profile=site_profile)
         cache = Cache(site_title=site_title, site_profile=site_profile)
-        website = Website(site_title=site_title, site_url=site_url, site_profile=site_profile, database_props=database, mail_props=email, cache_props=cache)
+        website = Website(site_title=site_title, site_url=site_url, site_profile=site_profile, database_props=database, mail_props=mail, cache_props=cache)
         admin = Admin(site_title=site_title, site_profile=site_profile, database_props=database)
         proxy = Proxy(site_title=site_title, site_profile=site_profile)
         monitoring = Monitoring(site_title=site_title, site_profile=site_profile)
@@ -1622,7 +1619,8 @@ class ProjectApi(Resource):
             management=management,
             vault=vault,
             code=code,
-            application=application
+            application=application,
+            mail=mail
         )
         
         readme = ReadMe(project_name=project.project_name)
@@ -1632,7 +1630,7 @@ class ProjectApi(Resource):
         dockerignore = DockerIgnore()
         
 
-        # Create docker-compose.yaml file in current working directory / website_title / docker-compose.yml
+        # Create docker-compose.yaml file in current working directory / site_title / docker-compose.yml
         project_docker_compose_file = os.path.join(project.project_base_dir, 'docker-compose.yml')
         if not os.path.exists(project.project_base_dir):
             os.makedirs(project.project_base_dir)
@@ -1642,7 +1640,7 @@ class ProjectApi(Resource):
             logging.info(
                 '################################################################################################')
             logging.info(
-                f'Generated docker-compose.yml file for {website.website_title} in {project_docker_compose_file}')
+                f'Generated docker-compose.yml file for {website.site_title} in {project_docker_compose_file}')
             logging.info(
                 '################################################################################################')
 
@@ -1654,7 +1652,7 @@ class ProjectApi(Resource):
                 logging.info(
                     '################################################################################################')
                 logging.info(
-                    f'Generated project-report.txt file for {website.website_title} in {project_report_file}')
+                    f'Generated project-report.txt file for {website.site_title} in {project_report_file}')
                 logging.info(
                     '################################################################################################')
                 
@@ -1666,7 +1664,7 @@ class ProjectApi(Resource):
                 logging.info(
                     '################################################################################################')
                 logging.info(
-                    f'Generated README.md file for {website.website_title} in {project_readme_file}')
+                    f'Generated README.md file for {website.site_title} in {project_readme_file}')
                 logging.info(
                     '################################################################################################')
                 
@@ -1678,7 +1676,7 @@ class ProjectApi(Resource):
                 logging.info(
                     '################################################################################################')
                 logging.info(
-                    f'Generated prerequisites-setup.sh file for {website.website_title} in {prerequisites_setup_file}')
+                    f'Generated prerequisites-setup.sh file for {website.site_title} in {prerequisites_setup_file}')
                 logging.info(
                     '################################################################################################')
                 
@@ -1690,7 +1688,7 @@ class ProjectApi(Resource):
                 logging.info(
                     '################################################################################################')
                 logging.info(
-                    f'Generated .gitignore file for {website.website_title} in {gitignore_file}')
+                    f'Generated .gitignore file for {website.site_title} in {gitignore_file}')
                 logging.info(
                     '################################################################################################')
                 
@@ -1702,7 +1700,7 @@ class ProjectApi(Resource):
                 logging.info(
                     '################################################################################################')
                 logging.info(
-                    f'Generated .dockerignore file for {website.website_title} in {dockerignore_file}')
+                    f'Generated .dockerignore file for {website.site_title} in {dockerignore_file}')
                 logging.info(
                     '################################################################################################')
                 
@@ -1718,7 +1716,7 @@ class ProjectApi(Resource):
             logging.info(
                 '################################################################################################')
             logging.info(
-                f'Generated project.zip file for {website.website_title} in {project_zip_file}')
+                f'Generated project.zip file for {website.site_title} in {project_zip_file}')
             logging.info(
                 '################################################################################################')
 
