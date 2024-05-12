@@ -493,7 +493,7 @@ class Management:
             --admin-password '{self.management_password}'
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
-            - ./{self.management_host}/:/data
+            - {self.management_host}-vol:/data
         networks:
             - {self.site_title}-network
         ports:
@@ -527,6 +527,8 @@ class Vault:
         image: alpine:latest
         container_name: {self.vault_host}
         hostname: {self.vault_host}
+        volumes:
+            - {self.vault_host}-vol:/vault
         command: >
             /bin/sh -c "echo Vault username (encrypted): && echo -n '{self.vault_username}' | sha256sum && echo Vault password (encrypted): && echo -n '{self.vault_password}' | sha256sum"
             /bin/sh -c "while true; do sleep 3000; done;"
@@ -1025,8 +1027,8 @@ class RunSh:
     A set of shell commands that will complete the setup of the website service.
     """
     
-    def __init__(self):
-        self.run_sh_content = '''
+    def __init__(self, site_url: str, site_title: str):
+        self.run_sh_content = f"""
         
 #!/bin/bash
 
@@ -1058,18 +1060,18 @@ if ! command -v docker-compose &> /dev/null; then
     exit
 fi
 
-# add example.com to /etc/hosts
-if grep -q "example.com" /etc/hosts; then
-    echo "example.com already exists in /etc/hosts"
+# add {site_url} to /etc/hosts
+if grep -q "{site_url}" /etc/hosts; then
+    echo "{site_url} already exists in /etc/hosts"
 else
-    echo "127.0.0.1    example.com www.example.com" | sudo tee -a /etc/hosts
+    echo "127.0.0.1    {site_url} www.{site_url}" | sudo tee -a /etc/hosts
 fi
 
 
 docker-compose exec website chmod +x /usr/local/bin/woo
 docker-compose exec website woo
 
-'''
+"""
 
     def get_script(self):
         """
@@ -1126,7 +1128,7 @@ networks:
     {self.website.site_title}-network: {{}}
 
 volumes:
-    {self.website.site_title}-vol: {{}}
+    {self.website.site_host}-vol: {{}}
     {self.admin.admin_host}-vol: {{}}
     {self.cache.cache_host}-vol: {{}}
     {self.monitoring.monitoring_host}-vol: {{}}
@@ -1428,7 +1430,7 @@ class ProjectApi(Resource):
         dockerignore = DockerIgnore()
         
         woosh = WooSh()
-        runsh = RunSh()
+        runsh = RunSh(site_url=site_url, site_title=site_title)
         
 
         # Create docker-compose.yaml file in current working directory / site_title / docker-compose.yml
