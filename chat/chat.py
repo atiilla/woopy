@@ -2,11 +2,10 @@ import os
 
 from groq import Groq
 
-client = Groq(
-    api_key=os.environ.get("GROQ_API_KEY"),
-)
 
-chat_completion = client.chat.completions.create(
+chat_completion = Groq(
+    api_key=os.environ.get("GROQ_API_KEY"),
+).chat.completions.create(
     messages=[
         {
             "role": "user",
@@ -16,5 +15,7 @@ chat_completion = client.chat.completions.create(
     model="mixtral-8x7b-32768",
 )
 
-print(chat_completion.choices[0].message.content)
+def learn_website_content(website_url: str):
+    
+    
 

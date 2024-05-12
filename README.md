@@ -39,7 +39,8 @@ curl -X 'POST' \
   'http://localhost:5000/docker-compose' \
   -H 'accept: application/json' \
   -H 'Content-Type: text/plain' \
-  -d 'SITE_TITLE=mydemowebsite
+  -d 'SITE_TITLE=mydemowebsite \
 SITE_URL=mydemowebsite.com
+SITE_PROFILE=dev
 ' >> docker-compose.yml
 ```

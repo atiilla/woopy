@@ -130,13 +130,13 @@ def get_port(service: str) -> int:
         return 80
     
 
-def generate_email(website_host: str, service_name: str) -> str:
+def generate_email(site_url: str, service_name: str) -> str:
     """
     Generate a random email
     """
     # Generate a random token and append it to the website host
     token = secrets.token_urlsafe(8)
-    return f"{service_name}-{token}@{website_host}"
+    return f"{service_name}-{token}@{site_url}"
 
 
 def get_logging() -> str:
@@ -155,17 +155,18 @@ class Database:
     Database class: This class is used to create a database for the website
     """
 
-    def __init__(self, site_title: str, site_profile: str):
+    def __init__(self, site_title: str, site_url: str, site_profile: str):
         self.database_name = generate_service(site_title)
         self.database_user = generate_username()
         self.database_password = generate_password()
         self.database_root_password = generate_password()
-        self.database_host = f"{site_title}-database"
+        self.database_host = "database"
         self.database_port = get_port("MySQL")
         self.database_character_set = "utf8mb4"
         self.database_table_prefix = "woopy_"
         self.site_profile = site_profile
         self.site_title = site_title
+        self.site_url = site_url
 
     # String representation of the class is docker-compose.yml data
     def to_docker_compose(self):
@@ -190,6 +191,20 @@ class Database:
         networks:
             - {self.site_title}-network
         restart: unless-stopped
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.mysql.rule=Host(`{self.database_host}.{self.site_url}`)"
+            - "traefik.http.routers.mysql.service=mysql"
+            - "traefik.http.routers.mysql.entrypoints=websecure"
+            - "traefik.http.services.mysql.loadbalancer.server.port=3306"
+            - "traefik.http.routers.mysql.tls=true"
+            - "traefik.http.routers.mysql.tls.certresolver=letsencrypt"
+            - "traefik.http.services.mysql.loadbalancer.passhostheader=true"
+            - "traefik.docker.network={self.site_title}-network"
+            - "traefik.http.routers.mysql.middlewares=compresstraefik"
+            - "traefik.http.middlewares.compresstraefik.compress=true"
+            - "traefik.http.routers.mysql.middlewares=authtraefik"
+            - "traefik.http.middlewares.authtraefik.basicauth.users={self.database_user}:{self.database_password}"
         healthcheck:
             test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
             interval: 10s
@@ -199,34 +214,7 @@ class Database:
             {get_logging()}
         """
         
-        local_profile = f"""
-    {self.database_host}:
-        image: mariadb:latest
-        container_name: {self.database_host}
-        hostname: {self.database_host}
-        volumes:
-            - ./{self.database_host}/:/var/lib/mysql
-        environment:
-            MARIADB_DATABASE: {self.database_name}
-            MARIADB_USER: {self.database_user}
-            MARIADB_PASSWORD: {self.database_password}
-            MARIADB_ROOT_PASSWORD: {self.database_root_password}
-            MARIADB_HOST: {self.database_host}
-            MARIADB_PORT_NUMBER: {self.database_port}
-            MARIADB_CHARACTER_SET: {self.database_character_set}
-        networks:
-            - {self.site_title}-network
-        restart: unless-stopped
-        healthcheck:
-            test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-            interval: 10s
-            timeout: 5s
-            retries: 5
-        logging:
-            {get_logging()}
-        """
-        
-        return local_profile if self.site_profile == "dev" else remote_profile
+        return remote_profile
 
 
 
@@ -235,13 +223,14 @@ class Cache:
     Cache class: This class is used to create a cache for the website
     """
 
-    def __init__(self, site_title: str, site_profile: str):
-        self.cache_host = f"{site_title}-cache"
+    def __init__(self, site_title: str, site_url: str, site_profile: str):
+        self.cache_host = "cache"
         self.cache_port = get_port("Redis")
         self.cache_username = generate_username()
         self.cache_password = generate_password()
         self.site_profile = site_profile
         self.site_title = site_title
+        self.site_url = site_url
 
     def to_docker_compose(self):
         """
@@ -268,7 +257,7 @@ class Cache:
             - {self.site_title}-network
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.redis.rule=Host(`{self.cache_host}`)" 
+            - "traefik.http.routers.redis.rule=Host(`{self.cache_host}.{self.site_url}`)" 
             - "traefik.http.routers.redis.service=redis"
             - "traefik.http.routers.redis.entrypoints=websecure"
             - "traefik.http.services.redis.loadbalancer.server.port=6379"
@@ -285,33 +274,7 @@ class Cache:
             {get_logging()}
         """
         
-        local_profile = f"""
-    {self.cache_host}:
-        image: redis:latest
-        container_name: {self.cache_host}
-        hostname: {self.cache_host}
-        environment:
-            REDIS_HOST: {self.cache_host}
-            REDIS_PORT_NUMBER: {self.cache_port}
-            REDIS_USERNAME: {self.cache_username}
-            REDIS_PASSWORD: {self.cache_password}
-            REDIS_DATABASE_NUMBER: "0"
-            REDIS_DISABLE_COMMANDS: "FLUSHDB,FLUSHALL"
-            REDIS_APPENDONLY: "yes"
-            REDIS_MAXMEMORY: "256mb"
-            REDIS_MAXMEMORY_POLICY: "allkeys-lru"
-        volumes:
-            - ./{self.cache_host}/:/data
-        networks:
-            - {self.site_title}-network
-        labels:
-            - "traefik.enable=false"
-        restart: unless-stopped
-        logging:
-            {get_logging()}
-        """
-        
-        return local_profile if self.site_profile == "dev" else remote_profile
+        return remote_profile
 
 
 class Mail:
@@ -320,8 +283,8 @@ class Mail:
     """
 
     def __init__(self, site_title: str, site_url: str, site_profile: str):
-        self.mail_host = f"{site_title}-mail"
-        self.mail_base_url = f"{site_url}"
+        self.mail_host = "mail"
+        self.mail_base_url = f"mail.{site_url}"
         self.mail_username = generate_username()
         self.mail_password = generate_password()
         self.mail_port = get_port("Mailhog")
@@ -329,6 +292,7 @@ class Mail:
         self.mail_protocol = "smtp"
         self.site_profile = site_profile
         self.site_title = site_title
+        self.site_url = site_url
 
     def to_docker_compose(self):
         """
@@ -355,7 +319,7 @@ class Mail:
             - {self.site_title}-network
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.mailhog.rule=Host(`{self.mail_host}`)"
+            - "traefik.http.routers.mailhog.rule=Host(`{self.mail_host}.{self.site_url}`)"
             - "traefik.http.routers.mailhog.service=mailhog"
             - "traefik.http.routers.mailhog.entrypoints=websecure"
             - "traefik.http.services.mailhog.loadbalancer.server.port=8025"
@@ -372,33 +336,7 @@ class Mail:
             {get_logging()}
         """
         
-        local_profile = f"""
-    {self.mail_host}:
-        image: mailhog/mailhog
-        container_name: {self.mail_host}
-        hostname: {self.mail_host}
-        environment:
-            - MH_UI_BIND_ADDR={self.mail_host}:8025
-            - MH_SMTP_BIND_ADDR={self.mail_host}:1025
-            - MH_API_BIND_ADDR={self.mail_host}:8025
-            - MH_UI_WEB_PATH=/
-        volumes:
-            - ./{self.mail_host}/:/mailhog/
-        ports:
-            - "8025:8025"
-            - "1025:{self.mail_port}"
-            - "587:587"
-            - "465:465"
-        networks:
-            - {self.site_title}-network
-        labels:
-            - "traefik.enable=false"
-        restart: unless-stopped
-        logging:
-            {get_logging()}
-        """
-        
-        return local_profile if self.site_profile == "dev" else remote_profile
+        return remote_profile
 
     
 
@@ -414,15 +352,14 @@ class Website:
         self.database_user = f"{database_props.database_user}"
         self.database_password = f"{database_props.database_password}"
         self.database_table_prefix = f"{database_props.database_table_prefix}"
-        self.website_host = f"{site_title}-website"
+        self.site_url = "website"
         self.site_title = f"{site_title}"
         self.site_profile = site_profile
-        self.website_url = f"{site_url}"
         self.website_description = f"Add description here for {site_title}: {datetime.now()}"
         self.website_admin_username = generate_username()
         # generate a hashed password with SHA-256 and base64 encoding
         self.website_admin_password = generate_password()
-        self.website_admin_email = generate_email(self.website_host, "website")
+        self.website_admin_email = generate_email(self.site_url, "website")
         self.mail_smtp_host = f"{mail_props.mail_host}"
         self.mail_smtp_port = f"{mail_props.mail_port}"
         self.mail_smtp_user = f"{mail_props.mail_username}"
@@ -438,12 +375,12 @@ class Website:
         """
         
         remote_profile: str = f"""
-    {self.website_host}:
+    {self.site_url}:
         image: wordpress:latest
-        container_name: {self.website_host}
-        hostname: {self.website_host}
+        container_name: {self.site_url}
+        hostname: {self.site_url}
         volumes:
-            - ./{self.website_host}/:/var/www/html
+            - ./{self.site_url}/:/var/www/html
         environment:
             - WORDPRESS_DATABASE_HOST={self.database_host}
             - WORDPRESS_DATABASE_PORT_NUMBER={self.database_port}
@@ -467,7 +404,7 @@ class Website:
             - WORDPRESS_REDIS_PORT={self.cache_port}
             - WORDPRESS_REDIS_DATABASE=0
             - WORDPRESS_REDIS_PASSWORD={self.cache_password}
-            - WORDPRESS_SITE_URL={self.website_url}
+            - WORDPRESS_SITE_URL={self.site_url}
         networks:
             - {self.site_title}-network
         depends_on:
@@ -480,7 +417,7 @@ class Website:
             - {self.mail_smtp_host}:{self.mail_smtp_host}
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.wordpress.rule=Host(`{self.website_host}`)"
+            - "traefik.http.routers.wordpress.rule=Host(`{self.site_url}`)"
             - "traefik.http.routers.wordpress.service=wordpress"
             - "traefik.http.routers.wordpress.entrypoints=websecure"
             - "traefik.http.services.wordpress.loadbalancer.server.port=80"
@@ -497,55 +434,7 @@ class Website:
             {get_logging()}
         """
         
-        local_profile: str = f"""
-    {self.website_host}:
-        image: wordpress:latest
-        container_name: {self.website_host}
-        hostname: {self.website_host}
-        volumes:
-            - ./{self.website_host}/:/var/www/html
-        environment:
-            - WORDPRESS_DATABASE_HOST={self.database_host}
-            - WORDPRESS_DATABASE_PORT_NUMBER={self.database_port}
-            - WORDPRESS_DATABASE_NAME={self.database_name}
-            - WORDPRESS_DATABASE_USER={self.database_user}
-            - WORDPRESS_DATABASE_PASSWORD={self.database_password}
-            - WORDPRESS_TABLE_PREFIX={self.database_table_prefix}
-            - WORDPRESS_BLOG_NAME={self.site_title}
-            - WORDPRESS_USERNAME={self.website_admin_username}
-            - WORDPRESS_PASSWORD={self.website_admin_password}
-            - WORDPRESS_EMAIL={self.website_admin_email}
-            - WORDPRESS_SMTP_HOST={self.mail_smtp_host}
-            - WORDPRESS_SMTP_PORT={self.mail_smtp_port}
-            - WORDPRESS_SMTP_USER={self.mail_smtp_user}
-            - WORDPRESS_SMTP_PASSWORD={self.mail_smtp_password}
-            - WORDPRESS_SMTP_PROTOCOL={self.mail_smtp_protocol}
-            - WORDPRESS_CACHE_ENABLED=true
-            - WORDPRESS_CACHE_DURATION=1440
-            - WORDPRESS_CACHE_TYPE=redis
-            - WORDPRESS_REDIS_HOST={self.cache_host}
-            - WORDPRESS_REDIS_PORT={self.cache_port}
-            - WORDPRESS_REDIS_DATABASE=0
-            - WORDPRESS_REDIS_PASSWORD={self.cache_password}
-            - WORDPRESS_SITE_URL={self.website_url}
-        networks:
-            - {self.site_title}-network
-        depends_on:
-            - {self.database_host}
-            - {self.cache_host}
-            - {self.mail_smtp_host}
-        links:
-            - {self.database_host}:{self.database_host}
-            - {self.cache_host}:{self.cache_host}
-            - {self.mail_smtp_host}:{self.mail_smtp_host}
-        labels:
-            - "traefik.enable=false"
-        restart: unless-stopped
-        logging:
-            {get_logging()}
-        """
-        
-        return local_profile if self.site_profile == "dev" else remote_profile
+        return remote_profile
 
 
 class Admin:
@@ -553,8 +442,8 @@ class Admin:
     Admin class: This class is used to create an admin panel for the website
     """
 
-    def __init__(self, site_title: str, site_profile: str, database_props: Database):
-        self.admin_host = f"{site_title}-admin"
+    def __init__(self, site_title: str, site_profile: str, site_url: str, database_props: Database):
+        self.admin_host = "admin"
         self.database_host = f"{database_props.database_host}"
         self.database_port = f"{database_props.database_port}"
         self.database_user = f"{database_props.database_user}"
@@ -563,6 +452,7 @@ class Admin:
         self.admin_password = generate_password()
         self.site_profile = site_profile
         self.site_title = site_title
+        self.site_url = site_url
 
     def to_docker_compose(self):
         """
@@ -587,7 +477,7 @@ class Admin:
             - {self.database_host}:{self.database_host}
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.{self.site_title}`)"
+            - "traefik.http.routers.phpmyadmin.rule=Host(`{self.admin_host}.{self.site_url}`)"
             - "traefik.http.routers.phpmyadmin.service=phpmyadmin"
             - "traefik.http.routers.phpmyadmin.entrypoints=websecure"
             - "traefik.http.services.phpmyadmin.loadbalancer.server.port=80"
@@ -602,31 +492,8 @@ class Admin:
             {get_logging()}
         """
         
-        local_profile = f"""
-    {self.admin_host}:
-        image: phpmyadmin:latest
-        container_name: {self.admin_host}
-        hostname: {self.admin_host}
-        environment:
-            PMA_HOST: {self.database_host}
-            PMA_PORT: {self.database_port}
-            PMA_USER: {self.database_user}
-            PMA_PASSWORD: {self.database_password}
-            PMA_ARBITRARY: 1
-        networks:
-            - {self.site_title}-network
-        depends_on:
-            - {self.database_host}
-        links:
-            - {self.database_host}:{self.database_host}
-        labels:
-            - "traefik.enable=false"
-        restart: unless-stopped
-        logging:
-            {get_logging()}
-        """
-        
-        return local_profile if self.site_profile == "dev" else remote_profile
+       
+        return remote_profile
 
     
 
@@ -635,10 +502,10 @@ class Proxy:
     Proxy class: This class is used to create a proxy for the website
     """
 
-    def __init__(self, site_title: str, site_profile: str):
+    def __init__(self, site_title: str, site_url: str, site_profile: str):
         self.proxy_username = generate_username()
         self.proxy_password = generate_password()
-        self.proxy_title = f"{site_title}-proxy"
+        self.proxy_title = "synapse"
         self.proxy_host = self.proxy_title
         self.proxy_port = get_port("Traefik")
         self.proxy_username = generate_username()
@@ -646,6 +513,7 @@ class Proxy:
         self.proxy_password = generate_password()
         self.site_profile = site_profile
         self.site_title = site_title
+        self.site_url = site_url
 
     def to_docker_compose(self):
         """
@@ -686,7 +554,7 @@ class Proxy:
             - "443:443"
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.dashboard.rule=Host(`traefik.{self.site_title}`)"
+            - "traefik.http.routers.dashboard.rule=Host(`{self.proxy_host}.{self.site_url}`)"
             - "traefik.http.routers.dashboard.service=api@internal"
             - "traefik.http.routers.dashboard.entrypoints=websecure"
             - "traefik.http.services.dashboard.loadbalancer.server.port=8080"
@@ -704,7 +572,7 @@ class Proxy:
             {get_logging()}
         """
         
-        return remote_profile if self.site_profile == "pro" else ""
+        return remote_profile
 
    
 
@@ -713,14 +581,15 @@ class Monitoring:
     Monitoring class: This class is used to create a monitoring system for the host
     """
 
-    def __init__(self, site_title: str, site_profile: str):
-        self.monitoring_host = f"{site_title}-monitoring"
+    def __init__(self, site_title: str, site_url: str, site_profile: str):
+        self.monitoring_host = "monitoring"
         self.monitoring_port = get_port("Cadvisor")
         self.monitoring_username = generate_username()
         self.montiroing_email = generate_email(self.monitoring_host, "monitoring")
         self.monitoring_password = generate_password()
         self.site_profile = site_profile
         self.site_title = site_title
+        self.site_url = site_url
 
     def to_docker_compose(self):
         """
@@ -745,7 +614,7 @@ class Monitoring:
             - {self.site_title}-network
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.cadvisor.rule=Host(`cadvisor.{self.site_title}`)"
+            - "traefik.http.routers.cadvisor.rule=Host(`cadvisor.{self.site_title}.{self.site_url}`)"
             - "traefik.http.routers.cadvisor.service=cadvisor"
             - "traefik.http.routers.cadvisor.entrypoints=websecure"
             - "traefik.http.services.cadvisor.loadbalancer.server.port=8080"
@@ -758,32 +627,8 @@ class Monitoring:
             {get_logging()}
         """
         
-        local_profile = f"""
-    {self.monitoring_host}:
-        image: gcr.io/cadvisor/cadvisor:v0.39.0
-        container_name: {self.monitoring_host}
-        hostname: {self.monitoring_host}
-        privileged: true
-        volumes:
-            - /var/run:/var/run:ro
-            - /sys:/sys:ro
-            - /var/lib/docker/:/var/lib/docker:ro
-            - /var/run/docker.sock:/var/run/docker.sock:ro
-            - /etc/machine-id:/etc/machine-id:ro
-            - /var/lib/dbus/machine-id:/var/lib/dbus/machine-id:ro
-        environment:
-            - TZ=Europe/Brussels
-        networks:
-            - {self.site_title}-network
-        labels:
-            - "traefik.enable=false"
-        restart: unless-stopped
-        logging:
-            {get_logging()}
-        """
-        
-        return local_profile if self.site_profile == "dev" else remote_profile
-
+       
+        return remote_profile
 
 
 class Management:
@@ -791,14 +636,15 @@ class Management:
     Management class: This class is used to create a management system for the website
     """
 
-    def __init__(self, site_title: str, site_profile: str):
-        self.management_host = f"{site_title}-management"
+    def __init__(self, site_title: str, site_url: str, site_profile: str):
+        self.management_host = "management"
         self.management_port = get_port("Portainer")
         self.management_username = generate_username()
         self.management_email = generate_email(self.management_host, "management")
         self.management_password = generate_password()
         self.site_profile = site_profile
         self.site_title = site_title
+        self.site_url = site_url
 
     def to_docker_compose(self):
         """
@@ -819,7 +665,7 @@ class Management:
             - {self.site_title}-network
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.portainer.rule=Host(`portainer.{self.site_title}`)"
+            - "traefik.http.routers.portainer.rule=Host(`{self.management_host}.{self.site_url}`)"
             - "traefik.http.routers.portainer.service=portainer"
             - "traefik.http.routers.portainer.entrypoints=websecure"
             - "traefik.http.services.portainer.loadbalancer.server.port=9000"
@@ -834,27 +680,7 @@ class Management:
             {get_logging()}
         """
         
-        local_profile = f"""
-    {self.management_host}:
-        image: portainer/portainer-ce:latest
-        container_name: {self.management_host}
-        hostname: {self.management_host}
-        command:
-            -H unix:///var/run/docker.sock
-            --admin-password '{self.management_password}'
-        volumes:
-            - /var/run/docker.sock:/var/run/docker.sock
-            - ./{self.management_host}/:/data
-        networks:
-            - {self.site_title}-network
-        labels:
-            - "traefik.enable=false"
-        restart: unless-stopped
-        logging:
-            {get_logging()}
-        """
-        
-        return local_profile if self.site_profile == "dev" else remote_profile
+        return remote_profile
 
 
 class Vault:
@@ -862,14 +688,15 @@ class Vault:
     Vault class: This class is used to create a vault for the website
     """
 
-    def __init__(self, site_title: str, site_profile: str):
-        self.vault_host = f"{site_title}-vault"
+    def __init__(self, site_title: str, site_url: str, site_profile: str):
+        self.vault_host = "vault"
         self.vault_port = get_port("Vault")
         self.vault_username = generate_username()
         self.vault_email = generate_email(self.vault_host, "vault")
         self.vault_password = generate_password()
         self.site_profile = site_profile
         self.site_title = site_title
+        self.site_url = site_url
 
     def to_docker_compose(self):
         """
@@ -887,7 +714,17 @@ class Vault:
         networks:
             - {self.site_title}-network
         labels:
-            - "traefik.enable=false"
+            - "traefik.enable=true"
+            - "traefik.http.routers.vault.rule=Host(`{self.vault_host}.{self.site_url}`)"
+            - "traefik.http.routers.vault.service=vault"
+            - "traefik.http.routers.vault.entrypoints=websecure"
+            - "traefik.http.services.vault.loadbalancer.server.port=8200"
+            - "traefik.http.routers.vault.tls=true"
+            - "traefik.http.routers.vault.tls.certresolver=letsencrypt"
+            - "traefik.http.services.vault.loadbalancer.passhostheader=true"
+            - "traefik.docker.network={self.site_title}-network"
+            - "traefik.http.routers.vault.middlewares=authtraefik"
+            - "traefik.http.middlewares.authtraefik.basicauth.users={self.vault_username}:{self.vault_password}"
         restart: unless-stopped
         logging:
             {get_logging()}
@@ -900,22 +737,23 @@ class Code:
     Code class: This class is used to create a code server for the website
     """
 
-    def __init__(self, site_title: str, site_host: str, site_profile: str):
-        self.code_host = f"{site_title}-code"
+    def __init__(self, site_title: str, site_url: str, site_profile: str):
+        self.code_host = "code"
         self.code_port = get_port("Code")
         self.code_username = generate_username()
         self.code_email = generate_email(self.code_host, "code")
         self.code_password = generate_password()
-        self.proxy_domain = f"{site_host}"
+        self.proxy_domain = f"{site_url}"
         self.proxy_port = get_port("Traefik")
         self.site_profile = site_profile
         self.site_title = site_title
+        self.site_url = site_url
 
     def to_docker_compose(self):
         """
         This function returns the docker-compose.yml data for the code server
         """
-        return f"""
+        remote_profile = f"""
     {self.code_host}:
         image: codercom/code-server
         container_name: {self.code_host}
@@ -932,7 +770,7 @@ class Code:
             - {self.site_title}-network
         labels:
             - "traefik.enable=true"
-            - "traefik.http.routers.vscode.rule=Host(`vscode.{self.site_title}`)"
+            - "traefik.http.routers.vscode.rule=Host(`{self.code_host}.{self.site_url}`)"
             - "traefik.http.routers.vscode.service=vscode"
             - "traefik.http.routers.vscode.entrypoints=websecure"
             - "traefik.http.services.vscode.loadbalancer.server.port=8080"
@@ -943,6 +781,8 @@ class Code:
         logging:
             {get_logging()}
         """
+        
+        return remote_profile
 
     
 class Application:
@@ -962,10 +802,10 @@ class Application:
             website (Website): The website object associated with the application.
             version (str, optional): The version of the application (default is "1.0").
         """
-        self.app_host= f"{site_title}-app"
+        self.app_host= f"app"
         self.project_name = self.app_host
         self.app_name = self.app_host
-        # reverse the host name. for example if the host url is "h2oheating.xyz" then the bundle will be "xyz.h2oheating"
+        # reverse the host name. for example if the host url is "example.xyz" then the bundle will be "xyz.example"
         self.bundle = ".".join(site_url.split(".")[::-1])
         self.version = version
         self.url = site_url
@@ -986,13 +826,14 @@ class Application:
             str: The docker-compose.yml data string representing the Application object.
         """
 
-        local_profile = f"""
+        remote_profile = f"""
     {self.app_host}:
         image: docker.io/yilmazchef/woopy-app:latest
         container_name: {self.app_host}
         hostname: {self.app_host}
         command: >
             /bin/bash -c "/app/entrypoint.sh"
+            /bin/sh -c "while true; do sleep 30000; done;"
         networks:
             - {self.site_title}-network
         labels:
@@ -1002,7 +843,7 @@ class Application:
             {get_logging()}
         """
         
-        return local_profile if self.site_profile == "dev" else ""
+        return remote_profile
 
 
 
@@ -1374,7 +1215,7 @@ Database Port: {self.database.database_port}
 Database Username: {self.database.database_user}
 Database Password: {self.database.database_password}
 -------------------------------------------------------------
-Website Hostname: {self.website.website_host}
+Website Hostname: {self.website.site_url}
 Website Email: {self.website.website_admin_email}
 Website Username: {self.website.website_admin_username}
 Website Password: {self.website.website_admin_password}
@@ -1597,16 +1438,16 @@ class ProjectApi(Resource):
         site_url=env["SITE_URL"]
         site_profile=env["SITE_PROFILE"]
 
-        database = Database(site_title=site_title, site_profile=site_profile)
+        database = Database(site_title=site_title, site_url=site_url, site_profile=site_profile)
         mail = Mail(site_title=site_title, site_url=site_url, site_profile=site_profile)
-        cache = Cache(site_title=site_title, site_profile=site_profile)
+        cache = Cache(site_title=site_title, site_url=site_url, site_profile=site_profile)
         website = Website(site_title=site_title, site_url=site_url, site_profile=site_profile, database_props=database, mail_props=mail, cache_props=cache)
-        admin = Admin(site_title=site_title, site_profile=site_profile, database_props=database)
-        proxy = Proxy(site_title=site_title, site_profile=site_profile)
-        monitoring = Monitoring(site_title=site_title, site_profile=site_profile)
-        management = Management(site_title=site_title, site_profile=site_profile)
-        vault = Vault(site_title=site_title, site_profile=site_profile)
-        code = Code(site_title=site_title, site_host=website.website_host, site_profile=site_profile)
+        admin = Admin(site_title=site_title, site_url=site_url, site_profile=site_profile, database_props=database)
+        proxy = Proxy(site_title=site_title, site_url=site_url, site_profile=site_profile)
+        monitoring = Monitoring(site_title=site_title, site_url=site_url, site_profile=site_profile)
+        management = Management(site_title=site_title, site_url=site_url, site_profile=site_profile)
+        vault = Vault(site_title=site_title, site_url=site_url, site_profile=site_profile)
+        code = Code(site_title=site_title, site_url=site_url, site_profile=site_profile)
         application = Application(site_title=site_title, site_url=site_url, site_profile=site_profile)
 
         project = Project(

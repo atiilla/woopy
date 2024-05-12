@@ -18,5 +18,5 @@ RUN chmod +x entrypoint.sh
 ENV DISPLAY=:0
 # install x11
 
-# podman build --tag docker.io/yilmazchef/woopy-app:latest .
-# podman run -it --rm --name=coolapp docker.io/yilmazchef/woopy-app:latest bash
+# docker build --tag docker.io/yilmazchef/woopy-app:latest .
+# docker run -it --rm --name=coolapp docker.io/yilmazchef/woopy-app:latest bash
