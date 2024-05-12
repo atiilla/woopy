@@ -1129,6 +1129,7 @@ networks:
 
 volumes:
     {self.website.site_host}-vol: {{}}
+    {self.database.database_host}-vol: {{}}
     {self.admin.admin_host}-vol: {{}}
     {self.cache.cache_host}-vol: {{}}
     {self.monitoring.monitoring_host}-vol: {{}}
