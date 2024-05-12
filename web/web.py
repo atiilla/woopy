@@ -337,8 +337,6 @@ class Website:
         hostname: {self.site_host}
         volumes:
             - {self.site_host}-vol:/var/www/html
-            - ./wp-cli.phar:/usr/local/bin/wp
-            - ./woo.sh:/usr/local/bin/woo
         environment:
             - WORDPRESS_DB_HOST={self.database_host}
             - WORDPRESS_DB_PORT_NUMBER={self.database_port}
@@ -381,6 +379,52 @@ class Website:
             {get_logging()}
         """
         
+
+class WpCli:
+    """
+    WpCli class: This class is used to create a wp-cli for the website
+    """
+    def __init__(self, site_title: str, site_url: str, site_host: str, database_host: str, database_password: str, cache_host: str):
+        self.wpcli_host = "wpcli"
+        self.wpcli_port = get_port("WordPress")
+        self.wpcli_username = generate_username()
+        self.wpcli_email = generate_email(self.wpcli_host, "wpcli")
+        self.wpcli_password = generate_password()
+        self.site_title = site_title
+        self.site_url = site_url
+        self.site_host = site_host
+        self.database_host = database_host
+        self.database_password = database_password
+        self.cache_host = cache_host
+        
+    def to_docker_compose(self):
+        """
+        This function returns the docker-compose.yml data for the wp-cli
+        """
+        return f"""
+    {self.wpcli_host}:
+        image: wordpress:cli
+        container_name: {self.wpcli_host}
+        hostname: {self.wpcli_host}
+        volumes:
+            - {self.wpcli_host}-vol:/var/www/html
+        ports:
+            - "8787:80"
+        depends_on:
+            - {self.site_host}
+            - {self.database_host}
+            - {self.cache_host}
+        environment:
+            WORDPRESS_DB_PASSWORD: {self.database_password}
+        networks:
+            - {self.site_title}-network
+        restart: unless-stopped
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "5"
+        """
 
 
 class Admin:
@@ -547,6 +591,42 @@ class Vault:
             {get_logging()}
         """
 
+
+class Certbot:
+    """
+    Certbot class: This class is used to create a certbot for the website
+    """
+    def __init__(self, site_title: str, site_url: str):
+        self.certbot_host = "certbot"
+        self.certbot_port = get_port("Certbot")
+        self.certbot_username = generate_username()
+        self.certbot_email = generate_email(self.certbot_host, "certbot")
+        self.certbot_password = generate_password()
+        self.site_title = site_title
+        self.site_url = site_url
+        
+    def to_docker_compose(self):
+        """
+        This function returns the docker-compose.yml data for the certbot
+        """
+        return f"""
+    {self.certbot_host}:
+        image: certbot/certbot
+        container_name: {self.certbot_host}
+        hostname: {self.certbot_host}
+        volumes:
+            - {self.certbot_host}-vol:/etc/letsencrypt
+        command: >
+            /bin/sh -c "while true; do sleep 3000; done;"
+        networks:
+            - {self.site_title}-network
+        ports:
+            - "8686:80"
+            - "8643:443"
+        restart: unless-stopped
+        logging:
+            {get_logging()}
+        """
 
 
 class Code:
@@ -944,37 +1024,13 @@ class WooSh:
     """
     
     def __init__(self):
-        self.woo_sh_content = '''
-#!/bin/bash
+        self.woo_sh_content = '''#!/bin/bash
 
 echo "Woo.sh started"
 echo "##################################################################################################"
 
 # Change directory to /var/www/html to be able to run WP-CLI commands
 cd /var/www/html || exit
-
-# Generate local certificate for HTTPS
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/${WORDPRESS_SITE_URL}.key -out /etc/ssl/certs/${WORDPRESS_SITE_URL}.crt -subj "/C=BE/ST=Brussels/L=Brussels/O=${WORDPRESS_SITE_TITLE}/OU=Org/CN=${WORDPRESS_SITE_URL}"
-
-# Add SSL configuration to Wordpress Apache configuration
-echo "<VirtualHost *:443>
-    ServerAdmin webmaster@${WORDPRESS_SITE_URL}
-    DocumentRoot /var/www/html
-    ServerName ${WORDPRESS_SITE_URL}
-    ServerAlias www.${WORDPRESS_SITE_URL}
-    ErrorLog ${APACHE_LOG_DIR}/error.log
-    CustomLog ${APACHE_LOG_DIR}/access.log combined
-    SSLEngine on
-    SSLCertificateFile /etc/ssl/certs/${WORDPRESS_SITE_URL}.crt
-    SSLCertificateKeyFile /etc/ssl/private/${WORDPRESS_SITE_URL}.key
-</VirtualHost>" > /etc/apache2/sites-available/000-default-ssl.conf
-
-# Enable SSL module
-a2enmod ssl
-
-# Enable SSL configuration
-a2ensite 000-default-ssl.conf
-
 
 wp core install --url=${WORDPRESS_SITE_URL} --title=${WORDPRESS_SITE_TITLE} --admin_user=${WORDPRESS_ADMIN_USER} --admin_password=${WORDPRESS_ADMIN_PASSWORD} --admin_email=${WORDPRESS_ADMIN_EMAIL} --skip-email --allow-root
 
@@ -1006,16 +1062,6 @@ wp plugin install vimeo --allow-root
 # WooCommerce themes
 wp theme install storefront --activate --allow-root
 
-# Restart Apache
-service apache2 restart
-
-# Add 100 random products to the website
-for i in {1..100}
-do
-    wp media create --allow-root --path=/var/www/html/wp-content/uploads/ --file=$(curl -s https://picsum.photos/1200/800/?random | jq -r .url)
-    wp wc product create --name="Product $i" --description="Description for product $i" --short_description="Short description for product $i" --sku="SKU-$i" --regular_price="$i.99" --sale_price="$i.49" --categories="Uncategorized" --images=$(wp media list --format=ids --allow-root | shuf -n 1) --allow-root
-done
-
 echo "##################################################################################################"
 echo "Woo.sh completed"
 
@@ -1027,63 +1073,58 @@ echo "Woo.sh completed"
         """
         return self.woo_sh_content
         
-        
-class RunSh:
+
+class CertSh: 
     """
     A set of shell commands that will complete the setup of the website service.
     """
     
-    def __init__(self, site_url: str, site_title: str):
-        self.run_sh_content = f"""
+    def __init__(self):
         
-#!/bin/bash
+        self.cert_sh_content = '''#!/bin/bash
 
-# Check if the script is running as root
-if [ "$EUID" -ne 0 ]; then
-    echo "Please run this script as root"
-    exit
-fi
+echo "Cert.sh started"
+echo "##################################################################################################"
 
-# Check the operating system
-if [ -f /etc/os-release ]; then
-    . /etc/os-release
-    OS=$NAME
-elif type lsb_release > /dev/null 2>&1; then
-    OS=$(lsb_release -si)
-else
-    OS=$(uname -s)
-fi
+# Change directory to /var/www/html to be able to run WP-CLI commands
+cd /var/www/html || exit
 
-# Check if Docker is installed
-if ! command -v docker &> /dev/null; then
-    echo "Docker is not installed. Please install Docker first."
-    exit
-fi
+# Generate local certificate for HTTPS
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/${WORDPRESS_SITE_URL}.key -out /etc/ssl/certs/${WORDPRESS_SITE_URL}.crt -subj "/C=BE/ST=Brussels/L=Brussels/O=${WORDPRESS_SITE_TITLE}/OU=Org/CN=${WORDPRESS_SITE_URL}"
 
-# Check if Docker Compose is installed
-if ! command -v docker-compose &> /dev/null; then
-    echo "Docker Compose is not installed. Please install Docker Compose first."
-    exit
-fi
+# Add SSL configuration to Wordpress Apache configuration
+echo "<VirtualHost *:443>
+    ServerAdmin webmaster@${WORDPRESS_SITE_URL}
+    DocumentRoot /var/www/html
+    ServerName ${WORDPRESS_SITE_URL}
+    ServerAlias www.${WORDPRESS_SITE_URL}
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+    SSLEngine on
+    SSLCertificateFile /etc/ssl/certs/${WORDPRESS_SITE_URL}.crt
+    SSLCertificateKeyFile /etc/ssl/private/${WORDPRESS_SITE_URL}.key
+</VirtualHost>" > /etc/apache2/sites-available/000-default-ssl.conf
 
-# add {site_url} to /etc/hosts
-if grep -q "{site_url}" /etc/hosts; then
-    echo "{site_url} already exists in /etc/hosts"
-else
-    echo "127.0.0.1    {site_url} www.{site_url}" | sudo tee -a /etc/hosts
-fi
+# Enable SSL module
+a2enmod ssl
 
+# Enable SSL configuration
+a2ensite 000-default-ssl.conf
 
-docker-compose exec website chmod +x /usr/local/bin/woo
-docker-compose exec website woo
+# Restart Apache
+service apache2 restart
 
-"""
+echo "##################################################################################################"
+echo "Cert.sh completed"
+
+'''
 
     def get_script(self):
         """
-        Returns the run.sh content.
+        Returns the cert.sh content.
         """
-        return self.run_sh_content
+        return self.cert_sh_content
+
 
 
 class Project:
@@ -1091,9 +1132,9 @@ class Project:
     Represents a project with multiple services: website, database, cache, admin, monitoring, management, vault, code, application, networks, volumes and more.
     """
 
-    def __init__(self, website: Website = None, database: Database = None, cache: Cache = None,
-                 admin: Admin = None, monitoring: Monitoring = None,
-                 management: Management = None, vault: Vault = None, code: Code = None,
+    def __init__(self, website: Website = None, wpcli: WpCli = None, database: Database = None, cache: Cache = None,
+                 admin: Admin = None, monitoring: Monitoring = None, management: Management = None, 
+                 vault: Vault = None, code: Code = None, certbot: Certbot = None,
                  mail: Mail = None, application: Application = None):
         """
         Initializes a new instance of the Project class.
@@ -1116,11 +1157,13 @@ class Project:
         self.project_email = "woopy@katawoo.com"
         self.database = database
         self.website = website
+        self.wpcli = wpcli
         self.admin = admin
         self.cache = cache
         self.monitoring = monitoring
         self.management = management
         self.vault = vault
+        self.certbot = certbot
         self.code = code
         self.application = application
         self.mail = mail
@@ -1137,12 +1180,14 @@ networks:
 
 volumes:
     {self.website.site_host}-vol: {{}}
+    {self.wpcli.wpcli_host}-vol: {{}}
     {self.database.database_host}-vol: {{}}
     {self.admin.admin_host}-vol: {{}}
     {self.cache.cache_host}-vol: {{}}
     {self.monitoring.monitoring_host}-vol: {{}}
     {self.management.management_host}-vol: {{}}
     {self.vault.vault_host}-vol: {{}}
+    {self.certbot.certbot_host}-vol: {{}}
     {self.code.code_host}-vol: {{}}
     {self.application.app_host}-vol: {{}}
     {self.mail.mail_host}-vol: {{}}
@@ -1150,11 +1195,13 @@ volumes:
 services:
     {self.database.to_docker_compose()}
     {self.website.to_docker_compose()}
+    {self.wpcli.to_docker_compose()}
     {self.admin.to_docker_compose()}
     {self.cache.to_docker_compose()}
     {self.monitoring.to_docker_compose()}
     {self.management.to_docker_compose()}
     {self.vault.to_docker_compose()}
+    {self.certbot.to_docker_compose()}
     {self.code.to_docker_compose()}
     {self.application.to_docker_compose()}
     {self.mail.to_docker_compose()}
@@ -1167,12 +1214,7 @@ services:
         Generates a report for the project.
         """
         report = f"""
-NOTE: This report is generated by woopy. It contains sensitive information. Please keep it secure.
-
-Run the following command to start the project:
-chmod +x ./run.sh
-./run.sh
-        
+NOTE: This report is generated by woopy. It contains sensitive information. Please keep it secure.       
 -------------------------------------------------------------
 Project: {self.project_name}
 Description: {self.project_description}
@@ -1188,6 +1230,11 @@ Website Hostname: {self.website.site_url}
 Website Email: {self.website.website_admin_email}
 Website Username: {self.website.website_admin_username}
 Website Password: {self.website.website_admin_password}
+-------------------------------------------------------------
+WP-CLI Hostname: {self.wpcli.wpcli_host}
+WP-CLI Port: {self.wpcli.wpcli_port}
+WP-CLI Username: {self.wpcli.wpcli_username}
+WP-CLI Password: {self.wpcli.wpcli_password}
 -------------------------------------------------------------
 Cache Hostname: {self.cache.cache_host}
 Cache Port: {self.cache.cache_port}
@@ -1206,6 +1253,11 @@ Vault Hostname: {self.vault.vault_host}
 Vault Port: {self.vault.vault_port}
 Vault Username: {self.vault.vault_username}
 Vault Password: {self.vault.vault_password}
+-------------------------------------------------------------
+Certbot Hostname: {self.certbot.certbot_host}
+Certbot Port: {self.certbot.certbot_port}
+Certbot Username: {self.certbot.certbot_username}
+Certbot Password: {self.certbot.certbot_password}
 -------------------------------------------------------------
 Code Hostname: {self.code.code_host}
 Code Port: {self.code.code_port}
@@ -1232,6 +1284,8 @@ networks:
 -------------------------------------------------------------
 volumes:
 {self.website.site_title}-vol
+{self.database.database_host}-vol
+{self.wpcli.wpcli_host}-vol
 {self.admin.admin_host}-vol
 {self.cache.cache_host}-vol
 {self.monitoring.monitoring_host}-vol
@@ -1240,6 +1294,7 @@ volumes:
 {self.code.code_host}-vol
 {self.application.app_host}-vol
 {self.mail.mail_host}-vol
+{self.certbot.certbot_host}-vol
 -------------------------------------------------------------
 """
 
@@ -1412,21 +1467,25 @@ class ProjectApi(Resource):
         mail = Mail(site_title=site_title, site_url=site_url)
         cache = Cache(site_title=site_title, site_url=site_url)
         website = Website(site_title=site_title, site_url=site_url, database_props=database, mail_props=mail, cache_props=cache)
+        wpcli=WpCli(site_title=site_title, site_url=site_url, site_host=website.site_host, database_host=database.database_host, database_password=database.database_password, cache_host=cache.cache_host)
         admin = Admin(site_title=site_title, site_url=site_url, database_props=database)
         monitoring = Monitoring(site_title=site_title, site_url=site_url)
         management = Management(site_title=site_title, site_url=site_url)
         vault = Vault(site_title=site_title, site_url=site_url)
+        certbot = Certbot(site_title=site_title, site_url=site_url)
         code = Code(site_title=site_title, site_url=site_url)
         application = Application(site_title=site_title, site_url=site_url)
 
         project = Project(
             website=website,
+            wpcli=wpcli,
             database=database,
             cache=cache,
             admin=admin,
             monitoring=monitoring,
             management=management,
             vault=vault,
+            certbot=certbot,
             code=code,
             application=application,
             mail=mail
@@ -1439,8 +1498,8 @@ class ProjectApi(Resource):
         dockerignore = DockerIgnore()
         
         woosh = WooSh()
-        runsh = RunSh(site_url=site_url, site_title=site_title)
-        
+        certsh = CertSh()
+
 
         # Create docker-compose.yaml file in current working directory / site_title / docker-compose.yml
         project_docker_compose_file = os.path.join(project.project_base_dir, 'docker-compose.yml')
@@ -1527,14 +1586,14 @@ class ProjectApi(Resource):
                 logging.info(
                     '################################################################################################')
                 
-            # generate run.sh file for the project
-            runsh_file = os.path.join(project.project_base_dir, 'run.sh')
-            with open(runsh_file, 'w', encoding='utf-8') as f:
-                f.write(runsh.get_script())
+            # generate cert.sh file for the project
+            certsh_file = os.path.join(project.project_base_dir, 'cert.sh')
+            with open(certsh_file, 'w', encoding='utf-8') as f:
+                f.write(certsh.get_script())
                 logging.info(
                     '################################################################################################')
                 logging.info(
-                    f'Generated run.sh file for {website.site_title} in {runsh_file}')
+                    f'Generated cert.sh file for {website.site_title} in {certsh_file}')
                 logging.info(
                     '################################################################################################')
                 
@@ -1562,9 +1621,8 @@ class ProjectApi(Resource):
             zip.write(prerequisites_setup_file, 'prerequisites-setup.sh')
             zip.write(gitignore_file, '.gitignore')
             zip.write(dockerignore_file, '.dockerignore')
-            zip.write(woosh_file, 'woo.sh')
-            zip.write(runsh_file, 'run.sh')
-            zip.write(wp_cli_file, 'wp-cli.phar')
+            # zip.write(certsh_file, 'cert.sh')
+            # zip.write(woosh_file, 'woo.sh')
             logging.info(
                 '################################################################################################')
             logging.info(
