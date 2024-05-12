@@ -340,12 +340,12 @@ class Website:
             - ./wp-cli.phar:/usr/local/bin/wp
             - ./woo.sh:/usr/local/bin/woo
         environment:
-            - WORDPRESS_DATABASE_HOST={self.database_host}
-            - WORDPRESS_DATABASE_PORT_NUMBER={self.database_port}
-            - WORDPRESS_DATABASE_NAME={self.database_name}
-            - WORDPRESS_DATABASE_USER={self.database_user}
-            - WORDPRESS_DATABASE_PASSWORD={self.database_password}
-            - WORDPRESS_TABLE_PREFIX={self.database_table_prefix}
+            - WORDPRESS_DB_HOST={self.database_host}
+            - WORDPRESS_DB_PORT_NUMBER={self.database_port}
+            - WORDPRESS_DB_NAME={self.database_name}
+            - WORDPRESS_DB_USER={self.database_user}
+            - WORDPRESS_DB_PASSWORD={self.database_password}
+            - WORDPRESS_DB_PREFIX={self.database_table_prefix}
             - WORDPRESS_BLOG_NAME={self.site_title}
             - WORDPRESS_USERNAME={self.website_admin_username}
             - WORDPRESS_PASSWORD={self.website_admin_password}
@@ -363,6 +363,10 @@ class Website:
             - WORDPRESS_REDIS_DATABASE=0
             - WORDPRESS_REDIS_PASSWORD={self.cache_password}
             - WORDPRESS_SITE_URL={self.site_url}
+            - WORDPRESS_SITE_TITLE={self.site_title}
+            - WORDPRESS_ADMIN_USER={self.website_admin_username}
+            - WORDPRESS_ADMIN_PASSWORD={self.website_admin_password}
+            - WORDPRESS_ADMIN_EMAIL={self.website_admin_email}
         networks:
             - {self.site_title}-network
         ports:
@@ -370,6 +374,8 @@ class Website:
             - "443:443"
         depends_on:
             - {self.database_host}
+        links:
+            - {self.database_host}:{self.database_host}
         restart: unless-stopped
         logging:
             {get_logging()}
@@ -1125,7 +1131,9 @@ class Project:
         """
         docker_compose_yaml = f"""
 networks:
-    {self.website.site_title}-network: {{}}
+    {self.website.site_title}-network: {{
+        driver: bridge
+    }}
 
 volumes:
     {self.website.site_host}-vol: {{}}
