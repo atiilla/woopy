@@ -2,7 +2,6 @@ import os
 
 from groq import Groq
 
-
 chat_completion = Groq(
     api_key=os.environ.get("GROQ_API_KEY"),
 ).chat.completions.create(
@@ -14,8 +13,4 @@ chat_completion = Groq(
     ],
     model="mixtral-8x7b-32768",
 )
-
-def learn_website_content(website_url: str):
-    
-    
 

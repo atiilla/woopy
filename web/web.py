@@ -668,7 +668,7 @@ class Code:
         """
         
 
-    
+
 class Application:
     """
     Represents an application associated with a website.
@@ -1621,8 +1621,8 @@ class ProjectApi(Resource):
             zip.write(prerequisites_setup_file, 'prerequisites-setup.sh')
             zip.write(gitignore_file, '.gitignore')
             zip.write(dockerignore_file, '.dockerignore')
-            # zip.write(certsh_file, 'cert.sh')
-            # zip.write(woosh_file, 'woo.sh')
+            zip.write(certsh_file, 'cert.sh')
+            zip.write(woosh_file, 'woo.sh')
             logging.info(
                 '################################################################################################')
             logging.info(
