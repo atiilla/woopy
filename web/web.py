@@ -337,6 +337,7 @@ class Website:
         hostname: {self.site_host}
         volumes:
             - {self.site_host}-vol:/var/www/html
+            - ./wp-cli.phar:/usr/local/bin/wp
         environment:
             - WORDPRESS_DB_HOST={self.database_host}
             - WORDPRESS_DB_PORT_NUMBER={self.database_port}
@@ -1623,6 +1624,7 @@ class ProjectApi(Resource):
             zip.write(dockerignore_file, '.dockerignore')
             zip.write(certsh_file, 'cert.sh')
             zip.write(woosh_file, 'woo.sh')
+            zip.write(wp_cli_file, 'wp-cli.phar')
             logging.info(
                 '################################################################################################')
             logging.info(
