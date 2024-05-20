@@ -6,7 +6,7 @@ import zipfile
 from datetime import datetime
 
 from flask import Flask, request, send_file
-# from flask_cors import CORS
+from flask_cors import CORS
 from flask_restful import Api, Resource
 from flask_swagger_ui import get_swaggerui_blueprint
 
@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 api = Api(app)
 
-## CORS(app)
+CORS(app)
 
 
 def generate_password() -> str:
@@ -25,6 +25,7 @@ def generate_password() -> str:
     # Generate a random token
     token = secrets.token_urlsafe(16)
     return token
+
 
 def generate_username() -> str:
     """
@@ -43,9 +44,10 @@ def generate_service(site_title: str) -> str:
     token = secrets.token_urlsafe(8)
     return f"{site_title}-{token}"
 
+
 def get_port(service: str) -> int:
     """
-    Get the default port number for a service: 
+    Get the default port number for a service:
         Options:
             WordPress: 80
             MySQL: 3306
@@ -129,7 +131,7 @@ def get_port(service: str) -> int:
         return 9898
     else:
         return 80
-    
+
 
 def generate_email(site_url: str, service_name: str) -> str:
     """
@@ -203,7 +205,6 @@ class Database:
         """
 
 
-
 class Cache:
     """
     Cache class: This class is used to create a cache for the website
@@ -247,7 +248,7 @@ class Cache:
         logging:
             {get_logging()}
         """
-        
+
 
 class Mail:
     """
@@ -292,16 +293,21 @@ class Mail:
         logging:
             {get_logging()}
         """
-        
 
-    
 
 class Website:
     """
     Website class: This class is used to create a website for the user
     """
 
-    def __init__(self, site_title: str, site_url: str, database_props: Database, mail_props: Mail, cache_props: Cache):
+    def __init__(
+        self,
+        site_title: str,
+        site_url: str,
+        database_props: Database,
+        mail_props: Mail,
+        cache_props: Cache,
+    ):
         self.database_host = f"{database_props.database_host}"
         self.database_port = f"{database_props.database_port}"
         self.database_name = f"{database_props.database_name}"
@@ -309,9 +315,11 @@ class Website:
         self.database_password = f"{database_props.database_password}"
         self.database_table_prefix = f"{database_props.database_table_prefix}"
         self.site_url = site_url
-        self.site_host="website"
+        self.site_host = "website"
         self.site_title = f"{site_title}"
-        self.website_description = f"Add description here for {site_title}: {datetime.now()}"
+        self.website_description = (
+            f"Add description here for {site_title}: {datetime.now()}"
+        )
         self.website_admin_username = generate_username()
         # generate a hashed password with SHA-256 and base64 encoding
         self.website_admin_password = generate_password()
@@ -329,7 +337,7 @@ class Website:
         """
         This function returns the docker-compose.yml data for the website
         """
-        
+
         return f"""
     {self.site_host}:
         image: wordpress:latest
@@ -379,13 +387,22 @@ class Website:
         logging:
             {get_logging()}
         """
-        
+
 
 class WpCli:
     """
     WpCli class: This class is used to create a wp-cli for the website
     """
-    def __init__(self, site_title: str, site_url: str, site_host: str, database_host: str, database_password: str, cache_host: str):
+
+    def __init__(
+        self,
+        site_title: str,
+        site_url: str,
+        site_host: str,
+        database_host: str,
+        database_password: str,
+        cache_host: str,
+    ):
         self.wpcli_host = "wpcli"
         self.wpcli_port = get_port("WordPress")
         self.wpcli_username = generate_username()
@@ -397,7 +414,7 @@ class WpCli:
         self.database_host = database_host
         self.database_password = database_password
         self.cache_host = cache_host
-        
+
     def to_docker_compose(self):
         """
         This function returns the docker-compose.yml data for the wp-cli
@@ -469,8 +486,7 @@ class Admin:
         logging:
             {get_logging()}
         """
-        
-    
+
 
 class Monitoring:
     """
@@ -513,8 +529,7 @@ class Monitoring:
         logging:
             {get_logging()}
         """
-        
-       
+
 
 class Management:
     """
@@ -553,7 +568,7 @@ class Management:
         logging:
             {get_logging()}
         """
-        
+
 
 class Vault:
     """
@@ -597,6 +612,7 @@ class Certbot:
     """
     Certbot class: This class is used to create a certbot for the website
     """
+
     def __init__(self, site_title: str, site_url: str):
         self.certbot_host = "certbot"
         self.certbot_port = get_port("Certbot")
@@ -605,7 +621,7 @@ class Certbot:
         self.certbot_password = generate_password()
         self.site_title = site_title
         self.site_url = site_url
-        
+
     def to_docker_compose(self):
         """
         This function returns the docker-compose.yml data for the certbot
@@ -667,7 +683,6 @@ class Code:
         logging:
             {get_logging()}
         """
-        
 
 
 class Application:
@@ -687,7 +702,7 @@ class Application:
             website (Website): The website object associated with the application.
             version (str, optional): The version of the application (default is "1.0").
         """
-        self.app_host= "app"
+        self.app_host = "app"
         self.project_name = self.app_host
         self.app_name = self.app_host
         # reverse the host name. for example if the host url is "example.xyz" then the bundle will be "xyz.example"
@@ -698,7 +713,9 @@ class Application:
         self.author = generate_username()
         self.author_email = generate_email(self.app_host, "app")
         self.formal_name = self.app_host
-        self.description = f"{self.app_name} is a native application for {self.app_host}."
+        self.description = (
+            f"{self.app_name} is a native application for {self.app_host}."
+        )
         self.long_description = f"{self.app_name} is designed to provide a user-friendly interface for {self.app_host}. It can be installed on Linux, macOS, Windows, Android, iOS. It is written in Python using Toga and Briefcase frameworks."
         self.site_title = site_title
 
@@ -732,14 +749,13 @@ class GraphViz:
     """
     GraphViz class: This class is used to create a graph for the website deployment file: docker-compose.yml
     """
-    
+
     def __init__(self, site_title: str, site_url: str):
         self.site_title = site_title
         self.site_url = site_url
         self.graphviz_host = "graphviz"
         self.graphviz_port = get_port("Graphviz")
-        
-        
+
     def to_docker_compose(self):
         """
         This function returns the docker-compose.yml data for the graphviz
@@ -764,18 +780,17 @@ class GraphViz:
         """
 
 
-
-class ReadMe():
+class ReadMe:
     """
     ReadMe class: This class is to provide ReadMe.md document for the project.
     It must explain all the services and how to use them.
-    
+
     It must provide documentation to 3 different level of users:
     - Beginner
     - Intermediate
     - Advanced
     """
-    
+
     def __init__(self, project_name: str):
         self.project_name = project_name
         self.readme_content = f"""
@@ -877,17 +892,16 @@ For further information, please visit [GitHub](https://github.com/atiilla/woopy)
 """
 
 
-
-class PreequisitesSetup():
+class PreequisitesSetup:
     """
     This class generates a shell script to install the required software on the host machine.
-    
+
     The script should install the following software:
     - Docker
     - Docker Compose
     - Kubernetes
     - Vagrant
-    
+
     The script should be able to run on the following operating systems:
     - Ubuntu
     - CentOS
@@ -903,11 +917,11 @@ class PreequisitesSetup():
     - Rocky Linux
     - Oracle Linux
     - AlmaLinux
-    
+
     The script must be able to detect the operating system and install the required software accordingly.
-    
+
     """
-    
+
     def __init__(self):
         self.prerequisites_setup_content = """
 #!/bin/bash
@@ -1057,9 +1071,9 @@ class WooSh:
     """
     A set of shell commands that will complete the setup of the website service.
     """
-    
+
     def __init__(self):
-        self.woo_sh_content = '''#!/bin/bash
+        self.woo_sh_content = """#!/bin/bash
 
 echo "Woo.sh started"
 echo "##################################################################################################"
@@ -1100,23 +1114,23 @@ wp theme install storefront --activate --allow-root
 echo "##################################################################################################"
 echo "Woo.sh completed"
 
-'''
+"""
 
     def get_script(self):
         """
         Returns the woo.sh content.
         """
         return self.woo_sh_content
-        
 
-class CertSh: 
+
+class CertSh:
     """
     A set of shell commands that will complete the setup of the website service.
     """
-    
+
     def __init__(self):
-        
-        self.cert_sh_content = '''#!/bin/bash
+
+        self.cert_sh_content = """#!/bin/bash
 
 echo "Cert.sh started"
 echo "##################################################################################################"
@@ -1152,7 +1166,7 @@ service apache2 restart
 echo "##################################################################################################"
 echo "Cert.sh completed"
 
-'''
+"""
 
     def get_script(self):
         """
@@ -1161,16 +1175,27 @@ echo "Cert.sh completed"
         return self.cert_sh_content
 
 
-
 class Project:
     """
     Represents a project with multiple services: website, database, cache, admin, monitoring, management, vault, code, application, networks, volumes and more.
     """
 
-    def __init__(self, website: Website = None, wpcli: WpCli = None, database: Database = None, cache: Cache = None,
-                 admin: Admin = None, monitoring: Monitoring = None, management: Management = None, 
-                 vault: Vault = None, code: Code = None, certbot: Certbot = None,
-                 mail: Mail = None, application: Application = None, graphviz: GraphViz = None):
+    def __init__(
+        self,
+        website: Website = None,
+        wpcli: WpCli = None,
+        database: Database = None,
+        cache: Cache = None,
+        admin: Admin = None,
+        monitoring: Monitoring = None,
+        management: Management = None,
+        vault: Vault = None,
+        code: Code = None,
+        certbot: Certbot = None,
+        mail: Mail = None,
+        application: Application = None,
+        graphviz: GraphViz = None,
+    ):
         """
         Initializes a new instance of the Project class.
         Create a temp directory in the user profile on the project name. For example: $HOME/.woopy/{project_name}
@@ -1333,11 +1358,11 @@ volumes:
         return report
 
 
-class ProjectLicense():
+class ProjectLicense:
     """
     ProjectLicense class: This class is used to create a LICENSE file for the project
     """
-    
+
     def __init__(self):
         self.license_content = """
     Fully open-source & libre software. You can use, modify, and distribute it.
@@ -1546,19 +1571,19 @@ class ProjectLicense():
 
 
     """
-    
+
     def get_license(self):
         """
         Returns the license content.
         """
         return self.license_content
-    
-    
-class Contributing():
+
+
+class Contributing:
     """
     Contributing class: This class is used to create a CONTRIBUTING.md file for the project
     """
-    
+
     def __init__(self):
         self.contributing_content = """
     # Contributing
@@ -1571,19 +1596,19 @@ class Contributing():
     4. Submit a pull request
 
     """
-    
+
     def get_contributing(self):
         """
         Returns the contributing content.
         """
         return self.contributing_content
-    
-    
-class CodeOfConduct():
+
+
+class CodeOfConduct:
     """
     CodeOfConduct class: This class is used to create a CODE_OF_CONDUCT.md file for the project
     """
-    
+
     def __init__(self):
         self.code_of_conduct_content = """
     # Code of Conduct
@@ -1591,19 +1616,19 @@ class CodeOfConduct():
     We are committed to providing a friendly, safe, and welcoming environment for everyone, regardless of level of experience
     
     """
-    
+
     def get_code_of_conduct(self):
         """
         Returns the code of conduct content.
         """
         return self.code_of_conduct_content
-    
-    
-class SecurityPolicy():
+
+
+class SecurityPolicy:
     """
     SecurityPolicy class: This class is used to create a SECURITY.md file for the project
     """
-    
+
     def __init__(self):
         self.security_policy_content = """
     # Security Policy
@@ -1611,25 +1636,25 @@ class SecurityPolicy():
     We take the security of our users seriously. If you have discovered a security vulnerability, please report it to the security team at KataWoo by emailing
     
     """
-    
+
     def get_security_policy(self):
         """
         Returns the security policy content.
         """
         return self.security_policy_content
-    
-    
-class RoadMap():
+
+
+class RoadMap:
     """
     RoadMap class: This class is used to create a ROADMAP.md file for the project
-    
+
     The roadmap should contain the following sections:
     - Introduction
     - Current Features
     - Future Features
     - Conclusion
     """
-    
+
     def __init__(self):
         self.roadmap_content = """
     # Roadmap
@@ -1655,24 +1680,24 @@ class RoadMap():
     The project is continuously evolving with new features and improvements.
 
     """
-    
+
     def get_roadmap(self):
         """
         Returns the roadmap content.
         """
         return self.roadmap_content
-    
-    
-class Changelog():
+
+
+class Changelog:
     """
     Changelog class: This class is used to create a CHANGELOG.md file for the project
-    
+
     The changelog should contain the following sections:
     - Introduction
     - Version History
     - Conclusion
     """
-    
+
     def __init__(self):
         self.changelog_content = """
     # Changelog
@@ -1706,7 +1731,7 @@ class Changelog():
     The project is continuously evolving with new features and improvements.
 
     """
-    
+
     def get_changelog(self):
         """
         Returns the changelog content.
@@ -1735,7 +1760,7 @@ class GitIgnore:
         - CircleCI .circleci directory
         - Dockerfile file
     """
-    
+
     def __init__(self):
         self.gitignore_content = """
 # Windows Thumbs.db file
@@ -1804,7 +1829,7 @@ class DockerIgnore:
         - Linux .DS_Store file
         - Common files
     """
-    
+
     def __init__(self):
         self.dockerignore_content = """
 # Windows Thumbs.db file
@@ -1831,12 +1856,14 @@ Thumbs.db
         """
         return self.dockerignore_content
 
+
 class ProjectApi(Resource):
     """
     Class to generate a docker-compose.yml file
     Args:
         Resource (_type_): _description_
     """
+
     def post(self):
         """
         Get the docker-compose.yml file
@@ -1866,21 +1893,34 @@ class ProjectApi(Resource):
         """
         # create a dictionary from the .env file
         env = {}
-        env_data = request.data.decode().split('\n')
+        env_data = request.data.decode().split("\n")
         for line in env_data:
             if line:
                 # if there are multipe = in the line, split only the first one
-                key, value = line.split('=', 1)
+                key, value = line.split("=", 1)
                 env[key] = value
 
-        site_title=env["SITE_TITLE"]
-        site_url=env["SITE_URL"]
+        site_title = env["SITE_TITLE"]
+        site_url = env["SITE_URL"]
 
         database = Database(site_title=site_title, site_url=site_url)
         mail = Mail(site_title=site_title, site_url=site_url)
         cache = Cache(site_title=site_title, site_url=site_url)
-        website = Website(site_title=site_title, site_url=site_url, database_props=database, mail_props=mail, cache_props=cache)
-        wpcli=WpCli(site_title=site_title, site_url=site_url, site_host=website.site_host, database_host=database.database_host, database_password=database.database_password, cache_host=cache.cache_host)
+        website = Website(
+            site_title=site_title,
+            site_url=site_url,
+            database_props=database,
+            mail_props=mail,
+            cache_props=cache,
+        )
+        wpcli = WpCli(
+            site_title=site_title,
+            site_url=site_url,
+            site_host=website.site_host,
+            database_host=database.database_host,
+            database_password=database.database_password,
+            cache_host=cache.cache_host,
+        )
         admin = Admin(site_title=site_title, site_url=site_url, database_props=database)
         monitoring = Monitoring(site_title=site_title, site_url=site_url)
         management = Management(site_title=site_title, site_url=site_url)
@@ -1903,28 +1943,27 @@ class ProjectApi(Resource):
             code=code,
             application=application,
             mail=mail,
-            graphviz=graphviz
+            graphviz=graphviz,
         )
-        
+
         readme = ReadMe(project_name=project.project_name)
         prerequisites_setup = PreequisitesSetup()
-        
+
         gitignore = GitIgnore()
         dockerignore = DockerIgnore()
-        
+
         woosh = WooSh()
         certsh = CertSh()
-        
+
         project_license = ProjectLicense()
         contributing = Contributing()
         code_of_conduct = CodeOfConduct()
         security_policy = SecurityPolicy()
         roadmap = RoadMap()
 
-
         buffer = io.BytesIO()
-        
-        with zipfile.ZipFile(buffer, 'w') as zipf:
+
+        with zipfile.ZipFile(buffer, "w") as zipf:
             zipf.writestr("docker-compose.yml", project.get_docker_compose_data())
             zipf.writestr("README.md", readme.readme_content)
             zipf.writestr("setup.sh", prerequisites_setup.get_script())
@@ -1938,29 +1977,133 @@ class ProjectApi(Resource):
             zipf.writestr("CODE_OF_CONDUCT.md", code_of_conduct.get_code_of_conduct())
             zipf.writestr("SECURITY.md", security_policy.get_security_policy())
             zipf.writestr("ROADMAP.md", roadmap.get_roadmap())
-            
+
+        buffer.seek(0)
+
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name="project.zip",
+            mimetype="application/zip",
+        )
+
+
+api.add_resource(ProjectApi, "/")
+
+
+class DockerComposeYamlSource(Resource):
+    """
+    Class to get the docker-compose.yml file
+    Args:
+        Resource (_type_): _description_
+    """
+
+    def post(self):
+        """
+        Get the docker-compose.yml file
+        ---
+        tags:
+          - Docker Compose
+        responses:
+            200:
+                description: docker-compose.yml file
+                content:
+                application/json:
+                    schema:
+                    type: object
+                    properties:
+                        status:
+                        type: string
+                        example: ok
+                        message:
+                        type: string
+                        example: docker-compose.yml file created
+                        version:
+                        type: string
+                        example: 1.0.0
+                        file:
+                        type: string
+                        example: docker-compose.yml file
+        """
+        # create a dictionary from the .env file
+        env = {}
+        env_data = request.data.decode().split("\n")
+        for line in env_data:
+            if line:
+                # if there are multipe = in the line, split only the first one
+                key, value = line.split("=", 1)
+                env[key] = value
+
+        site_title = env["SITE_TITLE"]
+        site_url = env["SITE_URL"]
+
+        database = Database(site_title=site_title, site_url=site_url)
+        mail = Mail(site_title=site_title, site_url=site_url)
+        cache = Cache(site_title=site_title, site_url=site_url)
+        website = Website(
+            site_title=site_title,
+            site_url=site_url,
+            database_props=database,
+            mail_props=mail,
+            cache_props=cache,
+        )
+        wpcli = WpCli(
+            site_title=site_title,
+            site_url=site_url,
+            site_host=website.site_host,
+            database_host=database.database_host,
+            database_password=database.database_password,
+            cache_host=cache.cache_host,
+        )
+        admin = Admin(site_title=site_title, site_url=site_url, database_props=database)
+        monitoring = Monitoring(site_title=site_title, site_url=site_url)
+        management = Management(site_title=site_title, site_url=site_url)
+        vault = Vault(site_title=site_title, site_url=site_url)
+        certbot = Certbot(site_title=site_title, site_url=site_url)
+        code = Code(site_title=site_title, site_url=site_url)
+        application = Application(site_title=site_title, site_url=site_url)
+        graphviz = GraphViz(site_title=site_title, site_url=site_url)
+
+        project = Project(
+            website=website,
+            wpcli=wpcli,
+            database=database,
+            cache=cache,
+            admin=admin,
+            monitoring=monitoring,
+            management=management,
+            vault=vault,
+            certbot=certbot,
+            code=code,
+            application=application,
+            mail=mail,
+            graphviz=graphviz,
+        )
+
+        buffer = io.BytesIO()
+        buffer.write(project.get_docker_compose_data().encode())
         buffer.seek(0)
         
-        return send_file(buffer, as_attachment=True, download_name="project.zip", mimetype="application/zip")
-            
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name="docker-compose.yml",
+            mimetype="application/yaml",
+        )
 
 
-api.add_resource(ProjectApi, '/')
+api.add_resource(DockerComposeYamlSource, "/dc")
 
 # Configure Swagger UI
-SWAGGER_URL = '/api'
-API_URL = '/swagger.json'
+SWAGGER_URL = "/api"
+API_URL = "/swagger.json"
 swaggerui_blueprint = get_swaggerui_blueprint(
-    SWAGGER_URL,
-    API_URL,
-    config={
-        'app_name': "Docker Compose Generator"
-    }
+    SWAGGER_URL, API_URL, config={"app_name": "Docker Compose Generator"}
 )
 app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 
-@app.route('/swagger.json')
+@app.route("/swagger.json")
 def swagger():
     return f"""
 {{
@@ -2032,10 +2175,57 @@ def swagger():
                     }}
                 }}
             }}
+        }},
+        "/dc": {{
+            "post": {{
+                "tags": [
+                    "Docker Compose"
+                ],
+                "summary": "Get the docker-compose.yml file",
+                "description": "Get the docker-compose.yml file",
+                "operationId": "get_docker_compose",
+                "requestBody": {{
+                    "description": "Environment variables",
+                    "content": {{
+                        "text/plain": {{
+                            "schema": {{
+                                "type": "string"
+                            }}
+                        }}
+                    }}
+                }},
+                "responses": {{
+                    "200": {{
+                        "description": "docker-compose.yml file",
+                        "content": {{
+                            "application/json": {{
+                                "schema": {{
+                                    "type": "object",
+                                    "properties": {{
+                                        "status": {{
+                                            "type": "string",
+                                            "example": "ok"
+                                        }},
+                                        "message": {{
+                                            "type": "string",
+                                            "example": "docker-compose.yml file created"
+                                        }},
+                                        "version": {{
+                                            "type": "string",
+                                            "example": "1.0.0"
+                                        }},
+                                        "file": {{
+                                            "type": "string",
+                                            "example": "docker-compose.yml file"
+                                        }}
+                                    }}
+                                }}
+                            }}
+                        }}
+                    }}
+                }}
+            }}
         }}
     }}
 }}
-
 """
-
-
