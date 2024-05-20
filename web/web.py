@@ -893,6 +893,12 @@ For further information, please visit [GitHub](https://github.com/atiilla/woopy)
 
 """
 
+    def to_readme(self):
+        """
+        This function returns the ReadMe.md content
+        """
+        return self.readme_content
+
 
 class PreequisitesSetup:
     """
@@ -1962,23 +1968,25 @@ class ProjectApi(Resource):
         code_of_conduct = CodeOfConduct()
         security_policy = SecurityPolicy()
         roadmap = RoadMap()
+        change_log = Changelog()
 
         buffer = io.BytesIO()
 
-        with zipfile.ZipFile(buffer, "w") as zipf:
-            zipf.writestr("docker-compose.yml", project.get_docker_compose_data())
-            zipf.writestr("README.md", readme.readme_content)
-            zipf.writestr("setup.sh", prerequisites_setup.get_script())
-            zipf.writestr(".gitignore", gitignore.get_gitignore())
-            zipf.writestr(".dockerignore", dockerignore.get_dockerignore())
-            zipf.writestr("woosh.sh", woosh.get_script())
-            zipf.writestr("cert.sh", certsh.get_script())
-            zipf.writestr("REPORT.md", project.get_project_report())
-            zipf.writestr("LICENSE", project_license.get_license())
-            zipf.writestr("CONTRIBUTING.md", contributing.get_contributing())
-            zipf.writestr("CODE_OF_CONDUCT.md", code_of_conduct.get_code_of_conduct())
-            zipf.writestr("SECURITY.md", security_policy.get_security_policy())
-            zipf.writestr("ROADMAP.md", roadmap.get_roadmap())
+        with zipfile.ZipFile(buffer, "w") as zip_file:
+            zip_file.writestr("docker-compose.yml", project.get_docker_compose_data())
+            zip_file.writestr("README.md", readme.to_readme())
+            zip_file.writestr("prerequisites.sh", prerequisites_setup.get_script())
+            zip_file.writestr("LICENSE", project_license.get_license())
+            zip_file.writestr("CONTRIBUTING.md", contributing.get_contributing())
+            zip_file.writestr("CODE_OF_CONDUCT.md", code_of_conduct.get_code_of_conduct())
+            zip_file.writestr("SECURITY.md", security_policy.get_security_policy())
+            zip_file.writestr("ROADMAP.md", roadmap.get_roadmap())
+            zip_file.writestr(".gitignore", gitignore.get_gitignore())
+            zip_file.writestr(".dockerignore", dockerignore.get_dockerignore())
+            zip_file.writestr("woosh.sh", woosh.get_script())
+            zip_file.writestr("cert.sh", certsh.get_script())
+            zip_file.writestr("CHANGELOG.md", change_log.get_changelog())
+            
 
         buffer.seek(0)
 
@@ -2150,7 +2158,7 @@ def swagger():
                     "200": {{
                         "description": "project.zip file",
                         "content": {{
-                            "application/json": {{
+                            "application/zip": {{
                                 "schema": {{
                                     "type": "object",
                                     "properties": {{
@@ -2200,7 +2208,7 @@ def swagger():
                     "200": {{
                         "description": "docker-compose.yml file",
                         "content": {{
-                            "application/json": {{
+                            "application/zip": {{
                                 "schema": {{
                                     "type": "object",
                                     "properties": {{
