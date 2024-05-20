@@ -1,7 +1,7 @@
+import io
 import logging
 import os
 import secrets
-import tempfile
 import zipfile
 from datetime import datetime
 
@@ -1300,6 +1300,191 @@ volumes:
         return report
 
 
+class ProjectLicense():
+    """
+    ProjectLicense class: This class is used to create a LICENSE file for the project
+    """
+    
+    def __init__(self):
+        self.license_content = """
+    Fully open-source & libre software. You can use, modify, and distribute it.
+
+    Apache License
+    Version 2.0, January 2004
+
+    http://www.apache.org/licenses/
+
+    [Your license text here]
+
+    """
+    
+    def get_license(self):
+        """
+        Returns the license content.
+        """
+        return self.license_content
+    
+    
+class Contributing():
+    """
+    Contributing class: This class is used to create a CONTRIBUTING.md file for the project
+    """
+    
+    def __init__(self):
+        self.contributing_content = """
+    # Contributing
+
+    We welcome contributions to the project. To contribute, please follow these steps:
+
+    1. Fork the repository
+    2. Create a new branch
+    3. Make your changes
+    4. Submit a pull request
+
+    """
+    
+    def get_contributing(self):
+        """
+        Returns the contributing content.
+        """
+        return self.contributing_content
+    
+    
+class CodeOfConduct():
+    """
+    CodeOfConduct class: This class is used to create a CODE_OF_CONDUCT.md file for the project
+    """
+    
+    def __init__(self):
+        self.code_of_conduct_content = """
+    # Code of Conduct
+
+    We are committed to providing a friendly, safe, and welcoming environment for everyone, regardless of level of experience
+    
+    """
+    
+    def get_code_of_conduct(self):
+        """
+        Returns the code of conduct content.
+        """
+        return self.code_of_conduct_content
+    
+    
+class SecurityPolicy():
+    """
+    SecurityPolicy class: This class is used to create a SECURITY.md file for the project
+    """
+    
+    def __init__(self):
+        self.security_policy_content = """
+    # Security Policy
+
+    We take the security of our users seriously. If you have discovered a security vulnerability, please report it to the security team at KataWoo by emailing
+    
+    """
+    
+    def get_security_policy(self):
+        """
+        Returns the security policy content.
+        """
+        return self.security_policy_content
+    
+    
+class RoadMap():
+    """
+    RoadMap class: This class is used to create a ROADMAP.md file for the project
+    
+    The roadmap should contain the following sections:
+    - Introduction
+    - Current Features
+    - Future Features
+    - Conclusion
+    """
+    
+    def __init__(self):
+        self.roadmap_content = """
+    # Roadmap
+
+    ## Introduction
+
+    This roadmap outlines the current features and future features of the project.
+
+    ## Current Features
+
+    - Feature 1
+    - Feature 2
+    - Feature 3
+
+    ## Future Features
+
+    - Feature 4
+    - Feature 5
+    - Feature 6
+
+    ## Conclusion
+
+    The project is continuously evolving with new features and improvements.
+
+    """
+    
+    def get_roadmap(self):
+        """
+        Returns the roadmap content.
+        """
+        return self.roadmap_content
+    
+    
+class Changelog():
+    """
+    Changelog class: This class is used to create a CHANGELOG.md file for the project
+    
+    The changelog should contain the following sections:
+    - Introduction
+    - Version History
+    - Conclusion
+    """
+    
+    def __init__(self):
+        self.changelog_content = """
+    # Changelog
+
+    ## Introduction
+
+    This changelog outlines the version history of the project.
+
+    ## Version History
+
+    ### Version 1.0.0
+
+    - Feature 1
+    - Feature 2
+    - Feature 3
+
+    ### Version 1.1.0
+
+    - Feature 4
+    - Feature 5
+    - Feature 6
+
+    ### Version 1.2.0
+
+    - Feature 7
+    - Feature 8
+    - Feature 9
+
+    ## Conclusion
+
+    The project is continuously evolving with new features and improvements.
+
+    """
+    
+    def get_changelog(self):
+        """
+        Returns the changelog content.
+        """
+        return self.changelog_content
+
+
 class GitIgnore:
     """
     GitIgnore class: This class is used to create a .gitignore file for the project
@@ -1498,25 +1683,35 @@ class ProjectApi(Resource):
         
         woosh = WooSh()
         certsh = CertSh()
+        
+        project_license = ProjectLicense()
+        contributing = Contributing()
+        code_of_conduct = CodeOfConduct()
+        security_policy = SecurityPolicy()
+        roadmap = RoadMap()
 
 
-        # Create a temp zipFileObject in the memory to store the files
-        with tempfile.NamedTemporaryFile(delete=True) as project_zip:
-            with zipfile.ZipFile(project_zip, 'w') as zip_file:
-                zip_file.writestr("docker-compose.yml", project.get_docker_compose_data())
-                zip_file.writestr("project_report.txt", project.get_project_report())
-                zip_file.writestr("README.md", readme.readme_content)
-                zip_file.writestr("prerequisites_setup.sh", prerequisites_setup.get_script())
-                zip_file.writestr(".gitignore", gitignore.get_gitignore())
-                zip_file.writestr(".dockerignore", dockerignore.get_dockerignore())
-                zip_file.writestr("woo.sh", woosh.get_script())
-                zip_file.writestr("cert.sh", certsh.get_script())
-
-            # Seek to the beginning of the file
-            project_zip.seek(0)
-
-            # Send the file
-            return send_file(project_zip.name, as_attachment=True, download_name="project.zip", mimetype="application/zip")
+        buffer = io.BytesIO()
+        
+        with zipfile.ZipFile(buffer, 'w') as zipf:
+            zipf.writestr("docker-compose.yml", project.get_docker_compose_data())
+            zipf.writestr("README.md", readme.readme_content)
+            zipf.writestr("setup.sh", prerequisites_setup.get_script())
+            zipf.writestr(".gitignore", gitignore.get_gitignore())
+            zipf.writestr(".dockerignore", dockerignore.get_dockerignore())
+            zipf.writestr("woosh.sh", woosh.get_script())
+            zipf.writestr("cert.sh", certsh.get_script())
+            zipf.writestr("REPORT.md", project.get_project_report())
+            zipf.writestr("LICENSE", project_license.get_license())
+            zipf.writestr("CONTRIBUTING.md", contributing.get_contributing())
+            zipf.writestr("CODE_OF_CONDUCT.md", code_of_conduct.get_code_of_conduct())
+            zipf.writestr("SECURITY.md", security_policy.get_security_policy())
+            zipf.writestr("ROADMAP.md", roadmap.get_roadmap())
+            
+        buffer.seek(0)
+        
+        return send_file(buffer, as_attachment=True, download_name="project.zip", mimetype="application/zip")
+            
 
 
 api.add_resource(ProjectApi, '/')
@@ -1611,3 +1806,5 @@ def swagger():
 }}
 
 """
+
+
