@@ -1,13 +1,11 @@
 import logging
 import os
 import secrets
-import socket
 import tempfile
+import zipfile
 from datetime import datetime
-from zipfile import ZIP_DEFLATED, ZipFile
 
-import requests
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, request, send_file
 from flask_cors import CORS
 from flask_restful import Api, Resource
 from flask_swagger_ui import get_swaggerui_blueprint
@@ -1502,141 +1500,23 @@ class ProjectApi(Resource):
         certsh = CertSh()
 
 
-        # Create docker-compose.yaml file in current working directory / site_title / docker-compose.yml
-        project_docker_compose_file = os.path.join(project.project_base_dir, 'docker-compose.yml')
-        if not os.path.exists(project.project_base_dir):
-            os.makedirs(project.project_base_dir)
-        with open(project_docker_compose_file, 'w', encoding='utf-8') as f:
-            docker_compose_data = project.get_docker_compose_data()
-            f.write(docker_compose_data)
-            logging.info(
-                '################################################################################################')
-            logging.info(
-                f'Generated docker-compose.yml file for {website.site_title} in {project_docker_compose_file}')
-            logging.info(
-                '################################################################################################')
+        # Create a temp zipFileObject in the memory to store the files
+        with tempfile.NamedTemporaryFile(delete=True) as project_zip:
+            with zipfile.ZipFile(project_zip, 'w') as zip_file:
+                zip_file.writestr("docker-compose.yml", project.get_docker_compose_data())
+                zip_file.writestr("project_report.txt", project.get_project_report())
+                zip_file.writestr("README.md", readme.readme_content)
+                zip_file.writestr("prerequisites_setup.sh", prerequisites_setup.get_script())
+                zip_file.writestr(".gitignore", gitignore.get_gitignore())
+                zip_file.writestr(".dockerignore", dockerignore.get_dockerignore())
+                zip_file.writestr("woo.sh", woosh.get_script())
+                zip_file.writestr("cert.sh", certsh.get_script())
 
-            # generate project-report.txt file
-            project_report_file = os.path.join(project.project_base_dir, 'project-report.txt')
-            with open(project_report_file, 'w', encoding='utf-8') as f:
-                project_report_data = project.get_project_report()
-                f.write(project_report_data)
-                logging.info(
-                    '################################################################################################')
-                logging.info(
-                    f'Generated project-report.txt file for {website.site_title} in {project_report_file}')
-                logging.info(
-                    '################################################################################################')
-                
-            
-            # generate README.md file
-            project_readme_file = os.path.join(project.project_base_dir, 'README.md')
-            with open(project_readme_file, 'w', encoding='utf-8') as f:
-                f.write(readme.readme_content)
-                logging.info(
-                    '################################################################################################')
-                logging.info(
-                    f'Generated README.md file for {website.site_title} in {project_readme_file}')
-                logging.info(
-                    '################################################################################################')
-                
-                
-            # generate prerequisites-setup.sh file for the project
-            prerequisites_setup_file = os.path.join(project.project_base_dir, 'prerequisites-setup.sh')
-            with open(prerequisites_setup_file, 'w', encoding='utf-8') as f:
-                f.write(prerequisites_setup.get_script())
-                logging.info(
-                    '################################################################################################')
-                logging.info(
-                    f'Generated prerequisites-setup.sh file for {website.site_title} in {prerequisites_setup_file}')
-                logging.info(
-                    '################################################################################################')
-                
-            
-            # generate .gitignore file for the project
-            gitignore_file = os.path.join(project.project_base_dir, '.gitignore')
-            with open(gitignore_file, 'w', encoding='utf-8') as f:
-                f.write(gitignore.get_gitignore())
-                logging.info(
-                    '################################################################################################')
-                logging.info(
-                    f'Generated .gitignore file for {website.site_title} in {gitignore_file}')
-                logging.info(
-                    '################################################################################################')
-                
-                
-            # generate .dockerignore file for the project
-            dockerignore_file = os.path.join(project.project_base_dir, '.dockerignore')
-            with open(dockerignore_file, 'w', encoding='utf-8') as f:
-                f.write(dockerignore.get_dockerignore())
-                logging.info(
-                    '################################################################################################')
-                logging.info(
-                    f'Generated .dockerignore file for {website.site_title} in {dockerignore_file}')
-                logging.info(
-                    '################################################################################################')
-                
-            # generate woo.sh file for the project
-            woosh_file = os.path.join(project.project_base_dir, 'woo.sh')
-            with open(woosh_file, 'w', encoding='utf-8') as f:
-                f.write(woosh.get_script())
-                logging.info(
-                    '################################################################################################')
-                logging.info(
-                    f'Generated woo.sh file for {website.site_title} in {woosh_file}')
-                logging.info(
-                    '################################################################################################')
-                
-            # generate cert.sh file for the project
-            certsh_file = os.path.join(project.project_base_dir, 'cert.sh')
-            with open(certsh_file, 'w', encoding='utf-8') as f:
-                f.write(certsh.get_script())
-                logging.info(
-                    '################################################################################################')
-                logging.info(
-                    f'Generated cert.sh file for {website.site_title} in {certsh_file}')
-                logging.info(
-                    '################################################################################################')
-                
-            # download wp-cli.phar file for the project
-            wp_cli_file = os.path.join(project.project_base_dir, 'wp-cli.phar')
-            if not os.path.exists(wp_cli_file):
-                url = 'https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar'
-                # Download it using python requests
-                r = requests.get(url, allow_redirects=True, stream=True, timeout=10)
-                with open(wp_cli_file, 'wb') as f:
-                    f.write(r.content)
-                    logging.info(
-                        '################################################################################################')
-                    logging.info(
-                        f'Downloaded wp-cli.phar file for {website.site_title} in {wp_cli_file}')
-                    logging.info(
-                        '################################################################################################')
+            # Seek to the beginning of the file
+            project_zip.seek(0)
 
-
-        project_zip_file = os.path.join(project.project_base_dir, 'project.zip')
-        with ZipFile(project_zip_file, 'w', compression=ZIP_DEFLATED) as zip:
-            zip.write(project_docker_compose_file, 'docker-compose.yml')
-            zip.write(project_report_file, 'project-report.txt')
-            zip.write(project_readme_file, 'README.md')
-            zip.write(prerequisites_setup_file, 'prerequisites-setup.sh')
-            zip.write(gitignore_file, '.gitignore')
-            zip.write(dockerignore_file, '.dockerignore')
-            zip.write(certsh_file, 'cert.sh')
-            zip.write(woosh_file, 'woo.sh')
-            zip.write(wp_cli_file, 'wp-cli.phar')
-            logging.info(
-                '################################################################################################')
-            logging.info(
-                f'Generated project.zip file for {website.site_title} in {project_zip_file}')
-            logging.info(
-                '################################################################################################')
-
-        
-        try:
-            return send_file(project_zip_file, as_attachment=True)
-        except Exception as e:
-            return str(e)
+            # Send the file
+            return send_file(project_zip.name, as_attachment=True, download_name="project.zip", mimetype="application/zip")
 
 
 api.add_resource(ProjectApi, '/')
@@ -1697,7 +1577,7 @@ def swagger():
                 }},
                 "responses": {{
                     "200": {{
-                        "description": "docker-compose.yml file",
+                        "description": "project.zip file",
                         "content": {{
                             "application/json": {{
                                 "schema": {{

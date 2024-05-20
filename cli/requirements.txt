@@ -1,4 +1,0 @@
-python-dotenv
-requests
-typing_extensions
-typer

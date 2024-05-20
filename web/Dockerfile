@@ -24,5 +24,5 @@ EXPOSE 5000
 # docker build --tag docker.io/yilmazchef/woopy-web:latest .
 # docker push docker.io/yilmazchef/woopy-web:latest
 # docker pull docker.io/yilmazchef/woopy-web
-# docker run -p 5000:5000 --name=coolweb -d docker.io/yilmazchef/woopy-web:latest
+# docker run -p 5000:5000 --name=api -d docker.io/yilmazchef/woopy-web:latest
 
