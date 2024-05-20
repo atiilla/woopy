@@ -15,7 +15,9 @@ logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 api = Api(app)
 
-CORS(app)
+# Allow CORS from all domains
+CORS(app, resources={r"/*": {"origins": "*"}}, headers="Content-Type", expose_headers="Authorization", 
+     max_age=86400, send_wildcard=True, intercept_exceptions=True, automatic_options=True)
 
 
 def generate_password() -> str:
