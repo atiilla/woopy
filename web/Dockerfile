@@ -12,6 +12,7 @@ COPY requirements.txt requirements.txt
 COPY __main__.py __main__.py
 COPY web.py web.py
 COPY .env .env
+COPY e2e.sh e2e.sh
 
 RUN pip3 install -r requirements.txt
 
