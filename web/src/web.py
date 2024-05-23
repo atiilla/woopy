@@ -1,9 +1,9 @@
 import io
 import logging
-import os
 import secrets
 import zipfile
 from datetime import datetime
+from enum import Enum
 
 from flask import Flask, request, send_file
 from flask_cors import CORS
@@ -16,8 +16,15 @@ app = Flask(__name__)
 api = Api(app)
 
 # Allow CORS from all domains
-CORS(app, resources={r"/*": {"origins": "*"}}, headers="Content-Type", expose_headers="Authorization", 
-     max_age=86400, send_wildcard=True, intercept_exceptions=True, automatic_options=True)
+CORS(
+    app=app,
+    resources={r"/*": {"origins": "*"}},
+    headers="Content-Type",
+    expose_headers="Authorization",
+    max_age=86400, send_wildcard=True,
+    intercept_exceptions=True,
+    automatic_options=True
+)
 
 
 def generate_password() -> str:
@@ -205,6 +212,60 @@ class Database:
         logging:
             {get_logging()}
         """
+        
+        
+    def to_kubernetes(self):
+        """
+        This function returns the kubernetes.yml data for the database
+        """
+        return f"""
+            - name: {self.database_host}
+              image: mariadb:latest
+              
+              ports:
+                - containerPort: 3306
+                - containerPort: 33060
+              
+              env:
+                - name: MARIADB_DATABASE
+                    value: {self.database_name}
+                - name: MARIADB_USER
+                    value: {self.database_user}
+                - name: MARIADB_PASSWORD
+                    value: {self.database_password}
+                - name: MARIADB_ROOT_PASSWORD
+                    value: {self.database_root_password}
+                - name: MARIADB_HOST
+                    value: {self.database_host}
+                - name: MARIADB_PORT_NUMBER
+                    value: {self.database_port}
+                - name: MARIADB_CHARACTER_SET
+                    value: {self.database_character_set}
+                    
+            restartPolicy: Always
+"""
+
+    def to_vagrant(self):
+        """
+        This function returns the Vagrantfile data for the database
+        """
+        return f"""
+    config.vm.define "{self.database_host}" do |db|
+        db.vm.box = "bento/ubuntu-20.04"
+        db.vm.hostname = "{self.database_host}"
+        db.vm.network "private_network", ip: "
+        db.vm.provision "shell", inline: <<-SHELL
+            sudo apt-get update
+            sudo apt-get install -y mariadb-server
+            sudo mysql -u root -e "CREATE DATABASE {self.database_name};"
+            sudo mysql -u root -e "CREATE USER '{self.database_user}'@'%' IDENTIFIED BY '{self.database_password}';"
+            sudo mysql -u root -e "GRANT ALL PRIVILEGES ON {self.database_name}.* TO '{self.database_user}'@'%';"
+            sudo mysql -u root -e "FLUSH PRIVILEGES;"
+            sudo mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '{self.database_root_password}';"
+            sudo mysql -u root -e "FLUSH PRIVILEGES;"
+        SHELL
+    end
+"""
 
 
 class Cache:
@@ -250,7 +311,44 @@ class Cache:
         logging:
             {get_logging()}
         """
-
+        
+    def to_kubernetes(self):
+        """
+        This function returns the kubernetes.yml data for the cache
+        """
+        return f"""
+            - name: {self.cache_host}
+                image: redis:latest
+                
+                ports:
+                    - containerPort: 6379
+                    - containerPort: 6380
+                
+                env:
+                    - name: REDIS_HOST
+                        value: {self.cache_host}
+                    - name: REDIS_PORT_NUMBER
+                        value: {self.cache_port}
+                    - name: REDIS_USERNAME
+                        value: {self.cache_username}
+                    - name: REDIS_PASSWORD
+                        value: {self.cache_password}
+                    - name: REDIS_DATABASE_NUMBER
+                        value: "0"
+                    - name: REDIS_DISABLE_COMMANDS
+                        value: "FLUSHDB,FLUSHALL"
+                    - name: REDIS_APPENDONLY
+                        value: "yes"
+                    - name: REDIS_MAXMEMORY
+                        value: "256mb"
+                    - name: REDIS_MAXMEMORY_POLICY
+                        value: "allkeys-lru"
+                    
+                restartPolicy: Always
+                
+"""
+                        
+        
 
 class Mail:
     """
@@ -295,6 +393,33 @@ class Mail:
         logging:
             {get_logging()}
         """
+        
+    def to_kubernetes(self):
+        """
+        This function returns the kubernetes.yml data for the mail server
+        """
+        return f"""
+            - name: {self.mail_host}
+                image: mailhog/mailhog
+                
+                ports:
+                    - containerPort: 8025
+                    - containerPort: 1025
+                    - containerPort: 587
+                    - containerPort: 465
+                    
+                env:
+                    - name: MH_UI_BIND_ADDR
+                        value: {self.mail_host}:8025
+                    - name: MH_SMTP_BIND_ADDR
+                        value: {self.mail_host}:1025
+                    - name: MH_API_BIND_ADDR
+                        value: {self.mail_host}:8025
+                    - name: MH_UI_WEB_PATH
+                        value: /    
+                    
+                restartPolicy: Always
+"""
 
 
 class Website:
@@ -389,6 +514,77 @@ class Website:
         logging:
             {get_logging()}
         """
+        
+    def to_kubernetes(self):
+        """
+        This function returns the kubernetes.yml data for the website
+        """
+        return f"""
+            - name: {self.site_host}
+                image: wordpress:latest
+                
+                ports:
+                    - containerPort: 80
+                    - containerPort: 443
+                    
+                env:
+                    - name: WORDPRESS_DB_HOST
+                        value: {self.database_host}
+                    - name: WORDPRESS_DB_PORT_NUMBER
+                        value: {self.database_port}
+                    - name: WORDPRESS_DB_NAME
+                        value: {self.database_name}
+                    - name: WORDPRESS_DB_USER
+                        value: {self.database_user}
+                    - name: WORDPRESS_DB_PASSWORD
+                        value: {self.database_password}
+                    - name: WORDPRESS_DB_PREFIX
+                        value: {self.database_table_prefix}
+                    - name: WORDPRESS_BLOG_NAME
+                        value: {self.site_title}
+                    - name: WORDPRESS_USERNAME
+                        value: {self.website_admin_username}
+                    - name: WORDPRESS_PASSWORD
+                        value: {self.website_admin_password}
+                    - name: WORDPRESS_EMAIL
+                        value: {self.website_admin_email}
+                    - name: WORDPRESS_SMTP_HOST
+                        value: {self.mail_smtp_host}
+                    - name: WORDPRESS_SMTP_PORT
+                        value: {self.mail_smtp_port}
+                    - name: WORDPRESS_SMTP_USER
+                        value: {self.mail_smtp_user}
+                    - name: WORDPRESS_SMTP_PASSWORD
+                        value: {self.mail_smtp_password}
+                    - name: WORDPRESS_SMTP_PROTOCOL
+                        value: {self.mail_smtp_protocol}
+                    - name: WORDPRESS_CACHE_ENABLED
+                        value: true
+                    - name: WORDPRESS_CACHE_DURATION
+                        value: 1440
+                    - name: WORDPRESS_CACHE_TYPE
+                        value: redis
+                    - name: WORDPRESS_REDIS_HOST
+                        value: {self.cache_host}
+                    - name: WORDPRESS_REDIS_PORT
+                        value: {self.cache_port}
+                    - name: WORDPRESS_REDIS_DATABASE
+                        value: 0
+                    - name: WORDPRESS_REDIS_PASSWORD
+                        value: {self.cache_password}
+                    - name: WORDPRESS_SITE_URL
+                        value: {self.site_url}
+                    - name: WORDPRESS_SITE_TITLE
+                        value: {self.site_title}
+                    - name: WORDPRESS_ADMIN_USER
+                        value: {self.website_admin_username}
+                    - name: WORDPRESS_ADMIN_PASSWORD
+                        value: {self.website_admin_password}
+                    - name: WORDPRESS_ADMIN_EMAIL
+                        value: {self.website_admin_email}
+                        
+                restartPolicy: Always
+"""
 
 
 class WpCli:
@@ -445,6 +641,27 @@ class WpCli:
                 max-size: "10m"
                 max-file: "5"
         """
+        
+    def to_kubernetes(self):
+        """
+        This function returns the kubernetes.yml data for the wp-cli
+        """
+        return f"""
+            - name: {self.wpcli_host}
+                image: wordpress:cli
+                
+                ports:
+                    - containerPort: 80
+                    - containerPort: 443
+                    
+                env:
+                    - name: WORDPRESS_DB_PASSWORD
+                        value: {self.database_password}
+                    - name: WORDPRESS_DB_HOST
+                        value: {self.database_host}
+                        
+                restartPolicy: Always
+"""
 
 
 class Admin:
@@ -488,6 +705,49 @@ class Admin:
         logging:
             {get_logging()}
         """
+        
+    def to_kubernetes(self):
+        """
+        This function returns the kubernetes.yml data for the admin panel
+        """
+        return f"""
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+    name: {self.admin_host}
+    labels:
+        app: {self.admin_host}
+        
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: {self.admin_host}
+    template:
+        metadata:
+            labels:
+                app: {self.admin_host}
+        spec:
+            containers:
+            - name: {self.admin_host}
+              image: phpmyadmin:latest
+              ports:
+              - containerPort: 80
+              env:
+              - name: PMA_HOST
+                value: {self.database_host}
+              - name: PMA_PORT
+                value: {self.database_port}
+              - name: PMA_USER
+                value: {self.database_user}
+              - name: PMA_PASSWORD
+                value: {self.database_password}
+              - name: PMA_ARBITRARY
+                value: 1
+            restartPolicy: Always
+"""
 
 
 class Monitoring:
@@ -531,6 +791,54 @@ class Monitoring:
         logging:
             {get_logging()}
         """
+        
+    def to_kubernetes(self):
+        """
+        This function returns the kubernetes.yml data for the monitoring system
+        """
+        return f"""
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+    name: {self.monitoring_host}
+    labels:
+        app: {self.monitoring_host}
+        
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: {self.monitoring_host}
+    template:
+        metadata:
+            labels:
+                app: {self.monitoring_host}
+        spec:
+            containers:
+            - name: {self.monitoring_host}
+              image: gcr.io/cadvisor/cadvisor:v0.39.0
+              ports:
+              - containerPort: 8080
+              env:
+              - name: TZ
+                value: Europe/Brussels
+              volumeMounts:
+              - mountPath: /var/run
+                readOnly: true
+              - mountPath: /sys
+                readOnly: true
+              - mountPath: /var/lib/docker/
+                readOnly: true
+              - mountPath: /var/run/docker.sock
+                readOnly: true
+              - mountPath: /etc/machine-id
+                readOnly: true
+              - mountPath: /var/lib/dbus/machine-id
+                readOnly: true
+            restartPolicy: Always
+"""
 
 
 class Management:
@@ -570,6 +878,47 @@ class Management:
         logging:
             {get_logging()}
         """
+        
+        
+    def to_kubernetes(self):
+        """
+        This function returns the kubernetes.yml data for the management system
+        """
+        return f"""
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+    name: {self.management_host}
+    labels:
+        app: {self.management_host}
+        
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: {self.management_host}
+    template:
+        metadata:
+            labels:
+                app: {self.management_host}
+        spec:
+            containers:
+            - name: {self.management_host}
+              image: portainer/portainer-ce:latest
+              command:
+              - -H
+              - unix:///var/run/docker.sock
+              - --admin-password
+              - "{self.management_password}"
+              volumeMounts:
+              - mountPath: /var/run/docker.sock
+                name: docker-socket
+              - mountPath: /data
+                name: portainer-data
+            restartPolicy: Always
+"""
 
 
 class Vault:
@@ -608,6 +957,46 @@ class Vault:
         logging:
             {get_logging()}
         """
+        
+    def to_kubernetes(self):
+        """
+        This function returns the kubernetes.yml data for the vault
+        """
+        return f"""
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+    name: {self.vault_host}
+    labels:
+        app: {self.vault_host}
+        
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: {self.vault_host}
+    template:
+        metadata:
+            labels:
+                app: {self.vault_host}
+        spec:
+            containers:
+            - name: {self.vault_host}
+              image: alpine:latest
+              command:
+              - /bin/sh
+              - -c
+              - echo Vault username (encrypted): && echo -n '{self.vault_username}' | sha256sum && echo Vault password (encrypted): && echo -n '{self.vault_password}' | sha256sum
+              - /bin/sh
+              - -c
+              - while true; do sleep 3000; done;
+              volumeMounts:
+              - mountPath: /vault
+                name: vault-data
+            restartPolicy: Always
+"""
 
 
 class Certbot:
@@ -646,6 +1035,43 @@ class Certbot:
         logging:
             {get_logging()}
         """
+        
+    def to_kubernetes(self):
+        """
+        This function returns the kubernetes.yml data for the certbot
+        """
+        return f"""
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+    name: {self.certbot_host}
+    labels:
+        app: {self.certbot_host}
+        
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: {self.certbot_host}
+    template:
+        metadata:
+            labels:
+                app: {self.certbot_host}
+        spec:
+            containers:
+            - name: {self.certbot_host}
+              image: certbot/certbot
+              command:
+              - /bin/sh
+              - -c
+              - while true; do sleep 3000; done;
+              volumeMounts:
+              - mountPath: /etc/letsencrypt
+                name: certbot-data
+            restartPolicy: Always
+"""
 
 
 class Code:
@@ -685,6 +1111,48 @@ class Code:
         logging:
             {get_logging()}
         """
+        
+    def to_kubernetes(self):
+        """
+        This function returns the kubernetes.yml data for the code server
+        """
+        return f"""
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+    name: {self.code_host}
+    labels:
+        app: {self.code_host}
+        
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: {self.code_host}
+    template:
+        metadata:
+            labels:
+                app: {self.code_host}
+        spec:
+            containers:
+            - name: {self.code_host}
+              image: codercom/code-server
+              ports:
+              - containerPort: 8080
+              env:
+              - name: PASSWORD
+                value: {self.code_password}
+              - name: SUDO_PASSWORD
+                value: {self.code_password}
+              - name: TZ
+                value: Europe/Brussels
+              volumeMounts:
+              - mountPath: /home/coder/project
+                name: code-data
+            restartPolicy: Always
+"""
 
 
 class Application:
@@ -731,7 +1199,7 @@ class Application:
 
         return f"""
     {self.app_host}:
-        image: docker.io/yilmazchef/woopy-app:latest
+        image: docker.io/yilmazchef/woopy:latest
         container_name: {self.app_host}
         hostname: {self.app_host}
         volumes:
@@ -745,6 +1213,50 @@ class Application:
         logging:
             {get_logging()}
         """
+        
+    def to_kubernetes(self):
+        """
+        Converts the Application object to a kubernetes.yml data string.
+
+        Returns:
+            str: The kubernetes.yml data string representing the Application object.
+        """
+
+        return f"""
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+    name: {self.app_host}
+    labels:
+        app: {self.app_host}
+        
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: {self.app_host}
+    template:
+        metadata:
+            labels:
+                app: {self.app_host}
+        spec:
+            containers:
+            - name: {self.app_host}
+              image: docker.io/yilmazchef/woopy:latest
+              command:
+              - /bin/bash
+              - -c
+              - /app/entrypoint.sh
+              - /bin/bash
+              - -c
+              - while true; do sleep 30000; done;
+              volumeMounts:
+              - mountPath: /app
+                name: app-data
+            restartPolicy: Always
+"""
 
 
 class GraphViz:
@@ -780,6 +1292,46 @@ class GraphViz:
         logging:
             {get_logging()}
         """
+        
+    def to_kubernetes(self):
+        """
+        This function returns the kubernetes.yml data for the graphviz
+        """
+        return f"""
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+    name: {self.graphviz_host}
+    labels:
+        app: {self.graphviz_host}
+        
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: {self.graphviz_host}
+    template:
+        metadata:
+            labels:
+                app: {self.graphviz_host}
+        spec:
+            containers:
+            - name: {self.graphviz_host}
+              image: pmsipilot/docker-compose-viz
+              command:
+              - render
+              - -m
+              - image
+              - /input/docker-compose.yml
+              volumeMounts:
+              - mountPath: /input
+                name: graphviz-data
+              - mountPath: /output
+                name: graphviz-output
+            restartPolicy: Always
+"""
 
 
 class ReadMe:
@@ -1183,6 +1735,16 @@ echo "Cert.sh completed"
         return self.cert_sh_content
 
 
+# create an enum to choose deployment options: docker-compose, kubernetes, vagrant
+class DeploymentOptions(Enum):
+    """
+    Represents the deployment options for the project.
+    """
+    DOCKER_COMPOSE = "docker-compose"
+    KUBERNETES = "kubernetes"
+    VAGRANT = "vagrant"
+    
+
 class Project:
     """
     Represents a project with multiple services: website, database, cache, admin, monitoring, management, vault, code, application, networks, volumes and more.
@@ -1203,6 +1765,7 @@ class Project:
         mail: Mail = None,
         application: Application = None,
         graphviz: GraphViz = None,
+        deployment: DeploymentOptions = DeploymentOptions.DOCKER_COMPOSE,
     ):
         """
         Initializes a new instance of the Project class.
@@ -1225,6 +1788,7 @@ class Project:
         self.application = application
         self.mail = mail
         self.graphviz = graphviz
+        self.deployment = deployment
 
     def get_docker_compose_data(self):
         """
@@ -1268,6 +1832,30 @@ services:
 """
 
         return docker_compose_yaml
+    
+
+    def get_kubernetes_data(self):
+        """
+        Converts the Project object to a kubernetes.yml data string.
+        Returns multiple kubernetes.yml data strings.
+        """
+        
+        database_kubernetes = self.database.to_kubernetes()
+        website_kubernetes = self.website.to_kubernetes()
+        wpcli_kubernetes = self.wpcli.to_kubernetes()
+        admin_kubernetes = self.admin.to_kubernetes()
+        cache_kubernetes = self.cache.to_kubernetes()
+        monitoring_kubernetes = self.monitoring.to_kubernetes()
+        management_kubernetes = self.management.to_kubernetes()
+        vault_kubernetes = self.vault.to_kubernetes()
+        certbot_kubernetes = self.certbot.to_kubernetes()
+        code_kubernetes = self.code.to_kubernetes()
+        application_kubernetes = self.application.to_kubernetes()
+        mail_kubernetes = self.mail.to_kubernetes()
+        graphviz_kubernetes = self.graphviz.to_kubernetes()
+        
+        
+        
 
     def get_project_report(self):
         """
@@ -2104,6 +2692,8 @@ class DockerComposeYamlSource(Resource):
 
 api.add_resource(DockerComposeYamlSource, "/dc")
 
+
+
 # Configure Swagger UI
 SWAGGER_URL = "/api"
 API_URL = "/swagger.json"
@@ -2235,7 +2825,67 @@ def swagger():
                     }}
                 }}
             }}
+        }},
+        /kube: {{
+            "post": {{
+                "tags": [
+                    "Kubernetes"
+                ],
+                "summary": "Get the kubernetes.yml file",
+                "description": "Get the kubernetes.yml file",
+                "operationId": "get_kubernetes",
+                "requestBody": {{
+                    "description": "Environment variables",
+                    "content": {{
+                        "text/plain": {{
+                            "schema": {{
+                                "type": "string"
+                            }}
+                        }}
+                    }}
+                }},
+                "responses": {{
+                    "200": {{
+                        "description": "kubernetes.yml file",
+                        "content": {{
+                            "application/zip": {{
+                                "schema": {{
+                                    "type": "object",
+                                    "properties": {{
+                                        "status": {{
+                                            "type": "string",
+                                            "example": "ok"
+                                        }},
+                                        "message": {{
+                                            "type": "string",
+                                            "example": "kubernetes.yml file created"
+                                        }},
+                                        "version": {{
+                                            "type": "string",
+                                            "example": "1.0.0"
+                                        }},
+                                        "file": {{
+                                            "type": "string",
+                                            "example": "kubernetes.yml file"
+                                        }}
+                                    }}
+                                }}
+                            }}
+                        }}
+                    }}
+                }}
+            }}
         }}
     }}
 }}
 """
+
+def main():
+    """
+    Main function to run the application
+    """
+    app.run(debug=True, host="os.getenv('WOOPY_HOST', '0.0.0.0')", port="os.getenv('WOOPY_PORT', 5000)")
+    
+    
+if __name__ == "__main__":
+    main()

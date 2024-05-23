@@ -8,19 +8,16 @@ RUN pip3 install --upgrade pip
 RUN python3 -m venv venv
 RUN . venv/bin/activate
 
-COPY requirements.txt requirements.txt
-COPY __main__.py __main__.py
-COPY web.py web.py
-COPY .env .env
-COPY e2e.sh e2e.sh
+COPY requirements.txt /app/requirements.txt
+COPY src /app/src
+COPY test /app/test
+COPY res /app/res
 
-RUN pip3 install -r requirements.txt
+RUN pip3 install -r /app/requirements.txt
 
-ENV FLASK_APP=web.py
-
-CMD ["python3", "-m" , "flask", "run", "--host=0.0.0.0"]
-
+ENV WOOPY_HOST=0.0.0.0
+ENV WOOPY_PORT=5000
 EXPOSE 5000
 
-
+CMD ["python3", "/app/src/app.py"]
 
