@@ -15,9 +15,5 @@ COPY res /app/res
 
 RUN pip3 install -r /app/requirements.txt
 
-ENV WOOPY_HOST=0.0.0.0
-ENV WOOPY_PORT=5000
-EXPOSE 5000
-
-CMD ["python3", "/app/src/app.py"]
+CMD ["python3", "/app/src/web.py"]
 

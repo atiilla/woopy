@@ -1,5 +1,6 @@
 import io
 import logging
+import os
 import secrets
 import zipfile
 from datetime import datetime
@@ -1683,6 +1684,30 @@ echo "Woo.sh completed"
         return self.woo_sh_content
 
 
+class FixWp():
+    """
+    A set of shell commands that will fix the WordPress installation.
+    """
+
+    def __init__(self):
+        self.fix_wp_content = """#!/bin/bash
+        
+echo "##################################################################################################"
+echo "FixWP.sh started"
+echo "Fixing permissions for WordPress"
+chown -R www-data:www-data /var/www/html
+echo "FixWP.sh completed"
+echo "##################################################################################################"
+
+"""
+
+    def get_script(self):
+        """
+        Returns the fixwp.sh content.
+        """
+        return self.fix_wp_content
+
+
 class CertSh:
     """
     A set of shell commands that will complete the setup of the website service.
@@ -1701,8 +1726,15 @@ cd /var/www/html || exit
 # Generate local certificate for HTTPS
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/${WORDPRESS_SITE_URL}.key -out /etc/ssl/certs/${WORDPRESS_SITE_URL}.crt -subj "/C=BE/ST=Brussels/L=Brussels/O=${WORDPRESS_SITE_TITLE}/OU=Org/CN=${WORDPRESS_SITE_URL}"
 
+echo "# Redirect HTTP to HTTPS
+# Activate this if you want to redirect HTTP to HTTPS, but make sure that you activate this after publishing the certificate
+# <VirtualHost *:80>
+#     ServerName {WORDPRESS_SITE_URL}
+#     Redirect permanent / https://{WORDPRESS_SITE_URL}
+# </VirtualHost>
+
 # Add SSL configuration to Wordpress Apache configuration
-echo "<VirtualHost *:443>
+<VirtualHost *:443>
     ServerAdmin webmaster@${WORDPRESS_SITE_URL}
     DocumentRoot /var/www/html
     ServerName ${WORDPRESS_SITE_URL}
@@ -1725,6 +1757,9 @@ service apache2 restart
 
 echo "##################################################################################################"
 echo "Cert.sh completed"
+
+# If you'd like to register this certificate to the product domain, run this command in the Wordpress container.
+# certbot certonly --agree-tos --email info@${WORDPRESS_SITE_URL} --expand --domains ${WORDPRESS_SITE_URL},www.${WORDPRESS_SITE_URL} --cert-path /etc/ssl/certs/h2oheating.xyz.crt --webroot-path /var/www/html --dry-run
 
 """
 
@@ -2884,7 +2919,12 @@ def main():
     """
     Main function to run the application
     """
-    app.run(debug=True, host="os.getenv('WOOPY_HOST', '0.0.0.0')", port="os.getenv('WOOPY_PORT', 5000)")
+    # Make it work on both localhost, docker local, and docker on a remote server
+    app.run(
+        host=os.getenv("FLASK_HOST", "localhost"),
+        port=os.getenv("FLASK_PORT", "5000"),
+        debug=os.getenv("FLASK_DEBUG", "False")
+    )
     
     
 if __name__ == "__main__":
